@@ -5,7 +5,7 @@ An implementation of the virtual machine as specified in *Computer Science: An O
 ## Specification
 
 > Appendix C
-> Let us say that our Vole computer has 16 general-purpose registers numbered 0x0 through 0xF. Each register is one byte (eight bits) long. For identifying registers within instructions, each register is assigned the unique four-bit pattern that represents its register number. Thus, register 0x0 is identified by binary 0000, and register 0x4 is identified by binary 0100. There are 256 cells in the Vole’s main memory. Each cell is assigned a unique address consisting of an integer in the range of 0 to 255. An address can therefore be represented by a pattern of eight bits ranging from 00000000 to 11111111 (or a hexadecimal value in the range of 0x00 to 0xFF).
+> Let us say that our Vole computer has 16 general-purpose registers numbered 0x0 through 0xF. Each register is one byte (eight bits) long. For identifying registers within instructions, each register is assigned the unique four-bit pattern that represents its register number. Thus, register 0x0 is identified by binary 0000, and register 0x4 is identified by binary 0100. There are 256 cells in the Vole's main memory. Each cell is assigned a unique address consisting of an integer in the range of 0 to 255. An address can therefore be represented by a pattern of eight bits ranging from 00000000 to 11111111 (or a hexadecimal value in the range of 0x00 to 0xFF).
 >
 > Floating-point values are assumed to be stored in an eight-bit format discussed
 in Section 1.7 and summarized in Figure 1.24.
@@ -32,4 +32,4 @@ in Section 1.7 and summarized in Figure 1.24.
 
 ## Specification Notes
 
-TODO
+The specification has the machine implement aspects of knowledge which is covered in the book, however it doesn't specify concrete types for the memory and registers. Based solely on the specification, signed 8-bit integers would be the ideal type for registers and memory values. The floating point operation is an outlier in the specification though. The operation could be implemented manually, however storing the result into the register would likely cause information loss or an incorrect result when being read back.
