@@ -72,8 +72,10 @@ pub struct VoleUI {
 
 impl Default for VoleUI {
     fn default() -> Self {
+        // TODO: Remove this
         let mut new_rom = Rom::new();
         new_rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
+
         Self {
             label: "Hello World!".to_owned(),
             source_code: DEMO_SOURCE.to_owned(),
@@ -120,6 +122,7 @@ impl eframe::App for VoleUI {
         // TODO: Add cycle speed
         if self.vole.running() {
             self.vole.cycle();
+            // TODO: Spin up background thread instead of relying on egui update
             ctx.request_repaint();
         }
 
