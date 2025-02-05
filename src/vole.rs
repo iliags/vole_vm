@@ -163,6 +163,7 @@ impl Vole {
                 self.running = false;
             }
             _ => {
+                // TODO: Change this to vole system crash, not panic
                 panic!("Invalid opcode: {:#X}", self.ir);
             }
         }
