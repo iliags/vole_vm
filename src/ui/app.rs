@@ -181,38 +181,36 @@ impl eframe::App for VoleUI {
 
                                         if self.active_cell_index.is_some_and(|index| index == i) {
                                             if response.changed() {
-                                                // TODO: Clean this up
-                                                match self.numeric_display {
-                                                    NumericDisplay::Hex => {
-                                                        let valid_hex =
-                                                            self.hex_regex.is_match(&byte_string);
-                                                        let valid_start =
-                                                            byte_string.starts_with("0x");
-                                                        let within_length = byte_string.len() < 5;
-
-                                                        if within_length {
-                                                            if valid_hex || valid_start {
-                                                                self.active_cell_string =
-                                                                    byte_string;
-                                                            }
-                                                        }
-                                                    }
+                                                let within_length = match self.numeric_display {
+                                                    NumericDisplay::Hex => byte_string.len() < 5,
                                                     NumericDisplay::Binary => {
-                                                        let valid_binary = self
-                                                            .binary_regex
-                                                            .is_match(&byte_string);
-                                                        let valid_start =
-                                                            byte_string.starts_with("0b");
-                                                        let within_length = byte_string.len() < 11;
-
-                                                        if within_length {
-                                                            if valid_binary || valid_start {
-                                                                self.active_cell_string =
-                                                                    byte_string;
-                                                            }
-                                                        }
+                                                        byte_string.len() < 11
                                                     }
                                                 };
+
+                                                let valid_start = match self.numeric_display {
+                                                    NumericDisplay::Hex => {
+                                                        byte_string.starts_with("0x")
+                                                    }
+                                                    NumericDisplay::Binary => {
+                                                        byte_string.starts_with("0b")
+                                                    }
+                                                };
+
+                                                let valid_data = match self.numeric_display {
+                                                    NumericDisplay::Hex => {
+                                                        self.hex_regex.is_match(&byte_string)
+                                                    }
+                                                    NumericDisplay::Binary => {
+                                                        self.binary_regex.is_match(&byte_string)
+                                                    }
+                                                };
+
+                                                if within_length {
+                                                    if valid_data || valid_start {
+                                                        self.active_cell_string = byte_string;
+                                                    }
+                                                }
                                             } else if response.lost_focus() {
                                                 let prefix = match self.numeric_display {
                                                     NumericDisplay::Hex => "0x",
