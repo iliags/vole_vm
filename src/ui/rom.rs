@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 #[derive(Debug, Default)]
 pub struct Rom {
     bytes: Vec<i8>,
