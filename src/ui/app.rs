@@ -3,9 +3,11 @@ use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 use regex::Regex;
 use strum::IntoEnumIterator;
 
+use crate::vole::Vole;
+
 use super::{rom::Rom, NumericDisplay, SourceEditMode};
 
-const DEMO_ROM: &str = "; Load 0x00 into r0
+const DEMO_SOURCE: &str = "; Load 0x00 into r0
 0x20, 0x00,
 
 ; Load 0xFF into r5
@@ -25,6 +27,21 @@ const DEMO_ROM: &str = "; Load 0x00 into r0
 
 ;Quit
 0xC0, 0x00,";
+
+const DEMO_ROM: &[i8] = &[
+    0x20,
+    0x00,
+    0x25,
+    0xFFu8 as i8,
+    0x14,
+    0x44,
+    0xB4u8 as i8,
+    0x0A,
+    0x35,
+    0x46,
+    0xC0u8 as i8,
+    0x00,
+];
 
 const HEX_STR: &str = "^(0x|0X)?[a-fA-F0-9]+$";
 const BINARY_STR: &str = "\\b(0b)?[01]+\\b";
@@ -59,13 +76,16 @@ pub struct VoleUI {
 
     #[serde(skip)]
     binary_regex: Regex,
+
+    #[serde(skip)]
+    vole: Vole,
 }
 
 impl Default for VoleUI {
     fn default() -> Self {
         Self {
             label: "Hello World!".to_owned(),
-            source_code: DEMO_ROM.to_owned(),
+            source_code: DEMO_SOURCE.to_owned(),
             source_edit_mode: SourceEditMode::Byte,
             numeric_display: NumericDisplay::Hex,
             rom: Rom::new(),
@@ -73,6 +93,7 @@ impl Default for VoleUI {
             active_cell_string: "".to_owned(),
             hex_regex: Regex::new(HEX_STR).unwrap(),
             binary_regex: Regex::new(BINARY_STR).unwrap(),
+            vole: Vole::new(),
         }
     }
 }
@@ -104,6 +125,11 @@ impl eframe::App for VoleUI {
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // TODO: Add cycle speed
+        if self.vole.running() {
+            self.vole.cycle();
+        }
+
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 // Github icon
@@ -138,6 +164,10 @@ impl eframe::App for VoleUI {
                     }
                 });
 
+            if ui.button("Load Demo").clicked() {
+                self.rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
+            }
+
             ui.separator();
 
             // TODO: Add proper modes
@@ -155,7 +185,7 @@ impl eframe::App for VoleUI {
                                 .show(ui, |ui| {
                                     for (i, byte) in self.rom.bytes_mut().iter_mut().enumerate() {
                                         let byte_index = match self.numeric_display {
-                                            NumericDisplay::Hex => format!("{:#X}", i),
+                                            NumericDisplay::Hex => format!("0x{:02X}", i),
                                             // Note: Rust counts the "0b" as part of the display length, hence the "010b",
                                             //  use "08b" if the prefix isn't visible.
                                             NumericDisplay::Binary => format!("{:#010b}", i),
@@ -169,7 +199,7 @@ impl eframe::App for VoleUI {
                                             self.active_cell_string.clone()
                                         } else {
                                             match self.numeric_display {
-                                                NumericDisplay::Hex => format!("{:#X}", byte),
+                                                NumericDisplay::Hex => format!("0x{:02X}", byte),
                                                 // Note: Rust counts the "0b" as part of the display length, hence the "010b",
                                                 //  use "08b" if the prefix isn't visible.
                                                 NumericDisplay::Binary => format!("{:#010b}", byte),
@@ -255,6 +285,8 @@ impl eframe::App for VoleUI {
 
             if ui.button("Run").clicked() {
                 // TODO: Run code
+                self.vole.load_rom(self.rom.bytes());
+                //self.vole.start();
             }
 
             ui.separator();
