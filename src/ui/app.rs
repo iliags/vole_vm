@@ -180,6 +180,11 @@ impl eframe::App for VoleUI {
                                             ui.add(egui::TextEdit::singleline(&mut byte_string));
 
                                         if self.active_cell_index.is_some_and(|index| index == i) {
+                                            let prefix = match self.numeric_display {
+                                                NumericDisplay::Hex => "0x",
+                                                NumericDisplay::Binary => "0b",
+                                            };
+
                                             if response.changed() {
                                                 let within_length = match self.numeric_display {
                                                     NumericDisplay::Hex => byte_string.len() < 5,
@@ -188,14 +193,7 @@ impl eframe::App for VoleUI {
                                                     }
                                                 };
 
-                                                let valid_start = match self.numeric_display {
-                                                    NumericDisplay::Hex => {
-                                                        byte_string.starts_with("0x")
-                                                    }
-                                                    NumericDisplay::Binary => {
-                                                        byte_string.starts_with("0b")
-                                                    }
-                                                };
+                                                let valid_start = byte_string.starts_with(prefix);
 
                                                 let valid_data = match self.numeric_display {
                                                     NumericDisplay::Hex => {
@@ -212,14 +210,14 @@ impl eframe::App for VoleUI {
                                                     }
                                                 }
                                             } else if response.lost_focus() {
-                                                let prefix = match self.numeric_display {
-                                                    NumericDisplay::Hex => "0x",
-                                                    NumericDisplay::Binary => "0b",
+                                                let radix = match self.numeric_display {
+                                                    NumericDisplay::Hex => 16,
+                                                    NumericDisplay::Binary => 2,
                                                 };
 
                                                 let result = i8::from_str_radix(
                                                     &byte_string.trim_start_matches(prefix),
-                                                    16,
+                                                    radix,
                                                 );
 
                                                 *byte = match result {
