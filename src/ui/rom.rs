@@ -1,9 +1,11 @@
+#![allow(dead_code)]
+
 #[derive(Debug, Default)]
-pub struct ROM {
+pub struct Rom {
     bytes: Vec<i8>,
 }
 
-impl ROM {
+impl Rom {
     pub fn new() -> Self {
         Self {
             bytes: vec![0; 256],

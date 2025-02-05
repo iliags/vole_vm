@@ -21,7 +21,7 @@ pub enum SourceEditMode {
 }
 
 impl SourceEditMode {
-    pub fn to_string(&self) -> &str {
+    pub fn to_string(self) -> &'static str {
         match self {
             SourceEditMode::Byte => "Byte",
             SourceEditMode::Instruction => "Instruction",
@@ -37,7 +37,7 @@ pub enum NumericDisplay {
 }
 
 impl NumericDisplay {
-    pub fn to_string(&self) -> &str {
+    pub fn to_string(self) -> &'static str {
         match self {
             NumericDisplay::Hex => "Hex",
             NumericDisplay::Binary => "Binary",

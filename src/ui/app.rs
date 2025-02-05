@@ -3,7 +3,7 @@ use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 use regex::Regex;
 use strum::IntoEnumIterator;
 
-use super::{rom::ROM, NumericDisplay, SourceEditMode};
+use super::{rom::Rom, NumericDisplay, SourceEditMode};
 
 const DEMO_ROM: &str = "; Load 0x00 into r0
 0x20, 0x00,
@@ -46,7 +46,7 @@ pub struct VoleUI {
     numeric_display: NumericDisplay,
 
     #[serde(skip)]
-    rom: ROM,
+    rom: Rom,
 
     #[serde(skip)]
     active_cell_index: Option<usize>,
@@ -68,7 +68,7 @@ impl Default for VoleUI {
             source_code: DEMO_ROM.to_owned(),
             source_edit_mode: SourceEditMode::Byte,
             numeric_display: NumericDisplay::Hex,
-            rom: ROM::new(),
+            rom: Rom::new(),
             active_cell_index: None,
             active_cell_string: "".to_owned(),
             hex_regex: Regex::new(HEX_STR).unwrap(),
@@ -119,7 +119,7 @@ impl eframe::App for VoleUI {
 
                 let numeric = &mut self.numeric_display;
                 for numerics in NumericDisplay::iter() {
-                    ui.selectable_value(numeric, numerics.clone(), numerics.to_string());
+                    ui.selectable_value(numeric, numerics, numerics.to_string());
                 }
             });
         });
@@ -134,7 +134,7 @@ impl eframe::App for VoleUI {
                 .show_ui(ui, |ui| {
                     let edit_mode = &mut self.source_edit_mode;
                     for mode in SourceEditMode::iter() {
-                        ui.selectable_value(edit_mode, mode.clone(), mode.to_string());
+                        ui.selectable_value(edit_mode, mode, mode.to_string());
                     }
                 });
 
@@ -204,10 +204,8 @@ impl eframe::App for VoleUI {
                                                     }
                                                 };
 
-                                                if within_length {
-                                                    if valid_data || valid_start {
-                                                        self.active_cell_string = byte_string;
-                                                    }
+                                                if within_length && (valid_data || valid_start) {
+                                                    self.active_cell_string = byte_string;
                                                 }
                                             } else if response.lost_focus() {
                                                 let radix = match self.numeric_display {
@@ -216,14 +214,11 @@ impl eframe::App for VoleUI {
                                                 };
 
                                                 let result = i8::from_str_radix(
-                                                    &byte_string.trim_start_matches(prefix),
+                                                    byte_string.trim_start_matches(prefix),
                                                     radix,
                                                 );
 
-                                                *byte = match result {
-                                                    Ok(v) => v,
-                                                    Err(_) => 0,
-                                                }
+                                                *byte = result.unwrap_or(0);
                                             }
                                         } else if response.gained_focus() {
                                             self.active_cell_index = Some(i);
