@@ -30,6 +30,10 @@ in Section 1.7 and summarized in Figure 1.24.
 > Section 1.7
 > We first designate the high-order bit of the byte as the sign bit. Once again, a 0 in the sign bit will mean that the value stored is nonnegative, and a 1 will mean that the value is negative. Next, we divide the remaining 7 bits of the byte into two groups, or fields: the exponent field and the mantissa field. Let us designate the 3 bits following the sign bit as the exponent field and the remaining 4 bits as the mantissa field.
 
-## Specification Notes
+### Specification Notes
 
 The specification has the machine implement aspects of knowledge which is covered in the book, however it doesn't specify concrete types for the memory and registers. Based solely on the specification, signed 8-bit integers would be the ideal type for registers and memory values. The floating point operation is an outlier in the specification though. The operation could be implemented manually, however storing the result into the register would likely cause information loss or an incorrect result when being read back.
+
+## Attribution
+
+Mouse icon by [ikoiku](https://ikoiku.itch.io/16-x-16-pixel-art-character-mouse), licensed under [Creative Commons Attribution-NoDerivatives 4.0](http://creativecommons.org/licenses/by-nd/4.0/).

@@ -4,7 +4,8 @@ version = "0.1.0"
 authors = ["James Lennon"]
 edition = "2021"
 include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
-
+description = "A software implementation of the Vole virtual machine."
+build = "build.rs"
 
 [dependencies]
 egui = "0.31"
@@ -19,6 +20,9 @@ log = "0.4"
 
 # App persistence
 serde = { version = "1", features = ["derive"] }
+
+[build-dependencies]
+embed-resource = { version = "3.0" }
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
