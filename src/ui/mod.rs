@@ -29,3 +29,18 @@ impl SourceEditMode {
         }
     }
 }
+
+#[derive(PartialEq, Clone, Copy, EnumIter)]
+pub enum NumericDisplay {
+    Hex,
+    Binary,
+}
+
+impl NumericDisplay {
+    pub fn to_string(&self) -> &str {
+        match self {
+            NumericDisplay::Hex => "Hex",
+            NumericDisplay::Binary => "Binary",
+        }
+    }
+}

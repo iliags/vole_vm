@@ -1,8 +1,9 @@
 use egui::scroll_area::ScrollBarVisibility;
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
+use regex::Regex;
 use strum::IntoEnumIterator;
 
-use super::{rom::ROM, SourceEditMode};
+use super::{rom::ROM, NumericDisplay, SourceEditMode};
 
 const DEMO_ROM: &str = "; Load 0x00 into r0
 0x20, 0x00,
@@ -26,6 +27,7 @@ const DEMO_ROM: &str = "; Load 0x00 into r0
 0xC0, 0x00,";
 
 const HEX_STR: &str = "^(0x|0X)?[a-fA-F0-9]+$";
+const BINARY_STR: &str = "\\b(0b)?[01]+\\b";
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -41,6 +43,9 @@ pub struct VoleUI {
     source_edit_mode: SourceEditMode,
 
     #[serde(skip)]
+    numeric_display: NumericDisplay,
+
+    #[serde(skip)]
     rom: ROM,
 
     #[serde(skip)]
@@ -48,6 +53,12 @@ pub struct VoleUI {
 
     #[serde(skip)]
     active_cell_string: String,
+
+    #[serde(skip)]
+    hex_regex: Regex,
+
+    #[serde(skip)]
+    binary_regex: Regex,
 }
 
 impl Default for VoleUI {
@@ -56,9 +67,12 @@ impl Default for VoleUI {
             label: "Hello World!".to_owned(),
             source_code: DEMO_ROM.to_owned(),
             source_edit_mode: SourceEditMode::Byte,
+            numeric_display: NumericDisplay::Hex,
             rom: ROM::new(),
             active_cell_index: None,
             active_cell_string: "".to_owned(),
+            hex_regex: Regex::new(HEX_STR).unwrap(),
+            binary_regex: Regex::new(BINARY_STR).unwrap(),
         }
     }
 }
@@ -90,9 +104,6 @@ impl eframe::App for VoleUI {
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
-
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 // Github icon
@@ -103,6 +114,13 @@ impl eframe::App for VoleUI {
 
                 // TODO: Color theme menu
                 egui::widgets::global_theme_preference_buttons(ui);
+
+                ui.separator();
+
+                let numeric = &mut self.numeric_display;
+                for numerics in NumericDisplay::iter() {
+                    ui.selectable_value(numeric, numerics.clone(), numerics.to_string());
+                }
             });
         });
 
@@ -115,7 +133,6 @@ impl eframe::App for VoleUI {
                 .selected_text(self.source_edit_mode.to_string())
                 .show_ui(ui, |ui| {
                     let edit_mode = &mut self.source_edit_mode;
-
                     for mode in SourceEditMode::iter() {
                         ui.selectable_value(edit_mode, mode.clone(), mode.to_string());
                     }
@@ -137,7 +154,12 @@ impl eframe::App for VoleUI {
                                 .num_columns(2)
                                 .show(ui, |ui| {
                                     for (i, byte) in self.rom.bytes_mut().iter_mut().enumerate() {
-                                        let byte_index = format!("{:#X}", i);
+                                        let byte_index = match self.numeric_display {
+                                            NumericDisplay::Hex => format!("{:#X}", i),
+                                            // Note: Rust counts the "0b" as part of the display length, hence the "010b",
+                                            //  use "08b" if the prefix isn't visible.
+                                            NumericDisplay::Binary => format!("{:#010b}", i),
+                                        };
                                         ui.label(byte_index);
 
                                         let mut byte_string = if self
@@ -146,7 +168,12 @@ impl eframe::App for VoleUI {
                                         {
                                             self.active_cell_string.clone()
                                         } else {
-                                            format!("{:#X}", byte)
+                                            match self.numeric_display {
+                                                NumericDisplay::Hex => format!("{:#X}", byte),
+                                                // Note: Rust counts the "0b" as part of the display length, hence the "010b",
+                                                //  use "08b" if the prefix isn't visible.
+                                                NumericDisplay::Binary => format!("{:#010b}", byte),
+                                            }
                                         };
 
                                         let response =
@@ -154,23 +181,58 @@ impl eframe::App for VoleUI {
 
                                         if self.active_cell_index.is_some_and(|index| index == i) {
                                             if response.changed() {
-                                                // If the string doesn't have a
+                                                // TODO: Clean this up
+                                                match self.numeric_display {
+                                                    NumericDisplay::Hex => {
+                                                        let valid_hex =
+                                                            self.hex_regex.is_match(&byte_string);
+                                                        let valid_start =
+                                                            byte_string.starts_with("0x");
+                                                        let within_length = byte_string.len() < 5;
 
-                                                self.active_cell_string = byte_string;
-                                            } else if response.lost_focus() {
-                                                // TODO: Save
+                                                        if within_length {
+                                                            if valid_hex || valid_start {
+                                                                self.active_cell_string =
+                                                                    byte_string;
+                                                            }
+                                                        }
+                                                    }
+                                                    NumericDisplay::Binary => {
+                                                        let valid_binary = self
+                                                            .binary_regex
+                                                            .is_match(&byte_string);
+                                                        let valid_start =
+                                                            byte_string.starts_with("0b");
+                                                        let within_length = byte_string.len() < 11;
 
-                                                *byte = match byte_string.parse::<i8>() {
-                                                    Ok(v) => v,
-                                                    _ => 0,
+                                                        if within_length {
+                                                            if valid_binary || valid_start {
+                                                                self.active_cell_string =
+                                                                    byte_string;
+                                                            }
+                                                        }
+                                                    }
                                                 };
+                                            } else if response.lost_focus() {
+                                                let prefix = match self.numeric_display {
+                                                    NumericDisplay::Hex => "0x",
+                                                    NumericDisplay::Binary => "0b",
+                                                };
+
+                                                let result = i8::from_str_radix(
+                                                    &byte_string.trim_start_matches(prefix),
+                                                    16,
+                                                );
+
+                                                *byte = match result {
+                                                    Ok(v) => v,
+                                                    Err(_) => 0,
+                                                }
                                             }
                                         } else if response.gained_focus() {
                                             self.active_cell_index = Some(i);
                                             self.active_cell_string = byte_string;
                                         }
-
-                                        //response.clicked()
 
                                         ui.end_row();
                                     }
