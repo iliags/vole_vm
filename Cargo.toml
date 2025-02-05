@@ -8,7 +8,7 @@ description = "A software implementation of the Vole virtual machine."
 build = "build.rs"
 
 [dependencies]
-egui = "0.31"
+egui = { version = "0.31", features = ["color-hex"] }
 eframe = { version = "0.31", default-features = false, features = [
     "accesskit",     # Make egui compatible with screen readers. NOTE: adds a lot of dependencies.
     "default_fonts", # Embed the default egui fonts.

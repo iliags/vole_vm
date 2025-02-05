@@ -1,4 +1,7 @@
-use egui::scroll_area::ScrollBarVisibility;
+use egui::{
+    containers::Frame, emath, epaint, epaint::PathStroke, hex_color, lerp, pos2, remap,
+    scroll_area::ScrollBarVisibility, vec2, Color32, Pos2, Rect,
+};
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 use regex::Regex;
 use strum::IntoEnumIterator;
@@ -143,161 +146,174 @@ impl eframe::App for VoleUI {
                 for numerics in NumericDisplay::iter() {
                     ui.selectable_value(numeric, numerics, numerics.to_string());
                 }
+
+                ui.separator();
+
+                if ui.button("Run").clicked() {
+                    // TODO: Run code
+                    //println!("{:?}", self.rom.bytes());
+                    self.vole.load_rom(self.rom.bytes());
+                    self.vole.start();
+                }
             });
         });
 
         /*
            Source code editing window
         */
-        egui::Window::new("Program Source Code").show(ctx, |ui| {
-            // Source edit mode selection
-            egui::ComboBox::from_label("Edit mode")
-                .selected_text(self.source_edit_mode.to_string())
-                .show_ui(ui, |ui| {
-                    let edit_mode = &mut self.source_edit_mode;
-                    for mode in SourceEditMode::iter() {
-                        ui.selectable_value(edit_mode, mode, mode.to_string());
-                    }
-                });
-
-            if ui.button("Load Demo").clicked() {
-                self.rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
-            }
-
-            ui.separator();
-
-            // TODO: Add proper modes
-            // Source code editor
-            match self.source_edit_mode {
-                SourceEditMode::Byte => {
-                    egui::ScrollArea::vertical()
-                        .max_height(300.0)
-                        .auto_shrink(false)
-                        .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
-                        .show(ui, |ui| {
-                            egui::Grid::new("byte_grid")
-                                .striped(true)
-                                .num_columns(2)
-                                .show(ui, |ui| {
-                                    for (i, byte) in self.rom.bytes_mut().iter_mut().enumerate() {
-                                        let byte_index = match self.numeric_display {
-                                            NumericDisplay::Hex => format!("0x{:02X}", i),
-                                            // Note: Rust counts the "0b" as part of the display length, hence the "010b",
-                                            //  use "08b" if the prefix isn't visible.
-                                            NumericDisplay::Binary => format!("{:#010b}", i),
-                                        };
-                                        ui.label(byte_index);
-
-                                        let mut byte_string = if self
-                                            .active_cell_index
-                                            .is_some_and(|index| index == i)
-                                        {
-                                            self.active_cell_string.clone()
-                                        } else {
-                                            match self.numeric_display {
-                                                NumericDisplay::Hex => format!("0x{:02X}", byte),
-                                                // Note: Rust counts the "0b" as part of the display length, hence the "010b",
-                                                //  use "08b" if the prefix isn't visible.
-                                                NumericDisplay::Binary => format!("{:#010b}", byte),
-                                            }
-                                        };
-
-                                        let response =
-                                            ui.add(egui::TextEdit::singleline(&mut byte_string));
-
-                                        if self.active_cell_index.is_some_and(|index| index == i) {
-                                            let prefix = match self.numeric_display {
-                                                NumericDisplay::Hex => "0x",
-                                                NumericDisplay::Binary => "0b",
-                                            };
-
-                                            if response.changed() {
-                                                let within_length = match self.numeric_display {
-                                                    NumericDisplay::Hex => byte_string.len() < 5,
-                                                    NumericDisplay::Binary => {
-                                                        byte_string.len() < 11
-                                                    }
-                                                };
-
-                                                let valid_start = byte_string.starts_with(prefix);
-
-                                                let valid_data = match self.numeric_display {
-                                                    NumericDisplay::Hex => {
-                                                        self.hex_regex.is_match(&byte_string)
-                                                    }
-                                                    NumericDisplay::Binary => {
-                                                        self.binary_regex.is_match(&byte_string)
-                                                    }
-                                                };
-
-                                                if within_length && (valid_data || valid_start) {
-                                                    self.active_cell_string = byte_string;
-                                                }
-                                            } else if response.lost_focus() {
-                                                let radix = match self.numeric_display {
-                                                    NumericDisplay::Hex => 16,
-                                                    NumericDisplay::Binary => 2,
-                                                };
-
-                                                let result = u8::from_str_radix(
-                                                    byte_string.trim_start_matches(prefix),
-                                                    radix,
-                                                );
-
-                                                *byte = result.unwrap_or(0);
-                                            }
-                                        } else if response.gained_focus() {
-                                            self.active_cell_index = Some(i);
-                                            self.active_cell_string = byte_string;
-                                        }
-
-                                        ui.end_row();
-                                    }
-                                });
-                        });
-                }
-                SourceEditMode::Instruction => {
-                    ui.label("Under Construction");
-                }
-                SourceEditMode::Assembly => {
-                    #[cfg(debug_assertions)]
-                    egui::ScrollArea::both().max_height(400.0).show(ui, |ui| {
-                        CodeEditor::default()
-                            .id_source("code editor")
-                            .with_rows(12)
-                            .with_fontsize(12.0)
-                            .with_theme(ColorTheme::AYU_DARK)
-                            .with_syntax(Syntax::vole())
-                            .with_numlines(true)
-                            .show(ui, &mut self.source_code);
+        egui::Window::new("Program Source Code")
+            .resizable(true)
+            .show(ctx, |ui| {
+                // Source edit mode selection
+                egui::ComboBox::from_label("Edit mode")
+                    .selected_text(self.source_edit_mode.to_string())
+                    .show_ui(ui, |ui| {
+                        let edit_mode = &mut self.source_edit_mode;
+                        for mode in SourceEditMode::iter() {
+                            ui.selectable_value(edit_mode, mode, mode.to_string());
+                        }
                     });
 
-                    #[cfg(not(debug_assertions))]
-                    ui.label("Under Construction");
+                if ui.button("Load Demo").clicked() {
+                    self.rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
                 }
-            }
 
-            ui.separator();
+                ui.separator();
 
-            if ui.button("Run").clicked() {
-                // TODO: Run code
-                //println!("{:?}", self.rom.bytes());
-                self.vole.load_rom(self.rom.bytes());
-                self.vole.start();
-            }
+                // TODO: Add proper modes
+                // Source code editor
+                match self.source_edit_mode {
+                    SourceEditMode::Byte => {
+                        egui::ScrollArea::vertical()
+                            .max_height(300.0)
+                            .auto_shrink(false)
+                            .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
+                            .show(ui, |ui| {
+                                egui::Grid::new("byte_grid")
+                                    .striped(true)
+                                    .num_columns(2)
+                                    .show(ui, |ui| {
+                                        for (i, byte) in self.rom.bytes_mut().iter_mut().enumerate()
+                                        {
+                                            let byte_index = match self.numeric_display {
+                                                NumericDisplay::Hex => format!("0x{:02X}", i),
+                                                // Note: Rust counts the "0b" as part of the display length, hence the "010b",
+                                                //  use "08b" if the prefix isn't visible.
+                                                NumericDisplay::Binary => format!("{:#010b}", i),
+                                            };
+                                            ui.label(byte_index);
 
-            /*
-            ui.separator();
+                                            let mut byte_string = if self
+                                                .active_cell_index
+                                                .is_some_and(|index| index == i)
+                                            {
+                                                self.active_cell_string.clone()
+                                            } else {
+                                                match self.numeric_display {
+                                                    NumericDisplay::Hex => {
+                                                        format!("0x{:02X}", byte)
+                                                    }
+                                                    // Note: Rust counts the "0b" as part of the display length, hence the "010b",
+                                                    //  use "08b" if the prefix isn't visible.
+                                                    NumericDisplay::Binary => {
+                                                        format!("{:#010b}", byte)
+                                                    }
+                                                }
+                                            };
 
+                                            let response = ui
+                                                .add(egui::TextEdit::singleline(&mut byte_string));
 
-            ui.collapsing("Output", |ui| {
-                // TODO: Save as text file
-                ui.label("Under construction");
+                                            if self
+                                                .active_cell_index
+                                                .is_some_and(|index| index == i)
+                                            {
+                                                let prefix = match self.numeric_display {
+                                                    NumericDisplay::Hex => "0x",
+                                                    NumericDisplay::Binary => "0b",
+                                                };
+
+                                                if response.changed() {
+                                                    let within_length = match self.numeric_display {
+                                                        NumericDisplay::Hex => {
+                                                            byte_string.len() < 5
+                                                        }
+                                                        NumericDisplay::Binary => {
+                                                            byte_string.len() < 11
+                                                        }
+                                                    };
+
+                                                    let valid_start =
+                                                        byte_string.starts_with(prefix);
+
+                                                    let valid_data = match self.numeric_display {
+                                                        NumericDisplay::Hex => {
+                                                            self.hex_regex.is_match(&byte_string)
+                                                        }
+                                                        NumericDisplay::Binary => {
+                                                            self.binary_regex.is_match(&byte_string)
+                                                        }
+                                                    };
+
+                                                    if within_length && (valid_data || valid_start)
+                                                    {
+                                                        self.active_cell_string = byte_string;
+                                                    }
+                                                } else if response.lost_focus() {
+                                                    let radix = match self.numeric_display {
+                                                        NumericDisplay::Hex => 16,
+                                                        NumericDisplay::Binary => 2,
+                                                    };
+
+                                                    let result = u8::from_str_radix(
+                                                        byte_string.trim_start_matches(prefix),
+                                                        radix,
+                                                    );
+
+                                                    *byte = result.unwrap_or(0);
+                                                }
+                                            } else if response.gained_focus() {
+                                                self.active_cell_index = Some(i);
+                                                self.active_cell_string = byte_string;
+                                            }
+
+                                            ui.end_row();
+                                        }
+                                    });
+                            });
+                    }
+                    SourceEditMode::Instruction => {
+                        ui.label("Under Construction");
+                    }
+                    SourceEditMode::Assembly => {
+                        #[cfg(debug_assertions)]
+                        egui::ScrollArea::both().max_height(400.0).show(ui, |ui| {
+                            CodeEditor::default()
+                                .id_source("code editor")
+                                .with_rows(12)
+                                .with_fontsize(12.0)
+                                .with_theme(ColorTheme::AYU_DARK)
+                                .with_syntax(Syntax::vole())
+                                .with_numlines(true)
+                                .show(ui, &mut self.source_code);
+                        });
+
+                        #[cfg(not(debug_assertions))]
+                        ui.label("Under Construction");
+                    }
+                }
+                ui.separator();
+
+                /*
+                ui.collapsing("Output", |ui| {
+                    // TODO: Save as text file
+                    ui.label("Under construction");
+                });
+                 */
             });
-             */
-        });
 
         egui::CentralPanel::default().show(ctx, |ui| {
+            /*
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("Vole Virtual Machine");
 
@@ -308,6 +324,65 @@ impl eframe::App for VoleUI {
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |_ui| {
                 //egui::warn_if_debug_build(ui);
+            });
+             */
+
+            Frame::canvas(ui.style()).show(ui, |ui| {
+                let color = if ui.visuals().dark_mode {
+                    Color32::from_additive_luminance(196)
+                } else {
+                    Color32::from_black_alpha(240)
+                };
+
+                ui.ctx().request_repaint();
+                let time = ui.input(|i| i.time);
+
+                let desired_size = ui.available_width() * vec2(1.0, 0.5);
+                let (_id, rect) = ui.allocate_space(desired_size);
+
+                let to_screen = emath::RectTransform::from_to(
+                    Rect::from_x_y_ranges(0.0..=1.0, -1.0..=1.0),
+                    rect,
+                );
+
+                let mut shapes = vec![];
+
+                for &mode in &[2, 3, 5] {
+                    let mode = mode as f64;
+                    let n = 120;
+                    let speed = 1.5;
+
+                    let points: Vec<Pos2> = (0..=n)
+                        .map(|i| {
+                            let t = i as f64 / (n as f64);
+                            let amp = (time * speed * mode).sin() / mode;
+                            let y = amp * (t * std::f64::consts::TAU / 2.0 * mode).sin();
+                            to_screen * pos2(t as f32, y as f32)
+                        })
+                        .collect();
+
+                    let thickness = 10.0 / mode as f32;
+                    shapes.push(epaint::Shape::line(
+                        points,
+                        if true {
+                            PathStroke::new_uv(thickness, move |rect, p| {
+                                let t = remap(p.x, rect.x_range(), -1.0..=1.0).abs();
+                                let center_color = hex_color!("#5BCEFA");
+                                let outer_color = hex_color!("#F5A9B8");
+
+                                Color32::from_rgb(
+                                    lerp(center_color.r() as f32..=outer_color.r() as f32, t) as u8,
+                                    lerp(center_color.g() as f32..=outer_color.g() as f32, t) as u8,
+                                    lerp(center_color.b() as f32..=outer_color.b() as f32, t) as u8,
+                                )
+                            })
+                        } else {
+                            PathStroke::new(thickness, color)
+                        },
+                    ));
+                }
+
+                ui.painter().extend(shapes);
             });
         });
     }
