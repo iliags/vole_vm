@@ -1,4 +1,7 @@
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
+use strum::IntoEnumIterator;
+
+use super::SourceEditMode;
 
 const DEMO_ROM: &str = "; Load 0x00 into r0
 0x20, 0x00,
@@ -19,8 +22,7 @@ const DEMO_ROM: &str = "; Load 0x00 into r0
 0x35, 0x46,
 
 ;Quit
-0xC0, 0x00,
-";
+0xC0, 0x00,";
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -32,6 +34,9 @@ pub struct VoleUI {
     #[serde(skip)]
     source_code: String,
 
+    #[serde(skip)]
+    source_edit_mode: SourceEditMode,
+
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
 }
@@ -42,6 +47,7 @@ impl Default for VoleUI {
             // Example stuff:
             label: "Hello World!".to_owned(),
             source_code: DEMO_ROM.to_owned(),
+            source_edit_mode: SourceEditMode::Instruction,
             value: 2.7,
         }
     }
@@ -90,24 +96,59 @@ impl eframe::App for VoleUI {
             });
         });
 
+        /*
+           Source code editing window
+        */
         egui::Window::new("Program Source Code").show(ctx, |ui| {
-            egui::ScrollArea::both().max_height(400.0).show(ui, |ui| {
-                CodeEditor::default()
-                    .id_source("code editor")
-                    .with_rows(12)
-                    .with_fontsize(12.0)
-                    .with_theme(ColorTheme::AYU_DARK)
-                    .with_syntax(Syntax::asm())
-                    .with_numlines(true)
-                    .show(ui, &mut self.source_code);
-            });
+            // Source edit mode selection
+            egui::ComboBox::from_label("")
+                .selected_text(self.source_edit_mode.to_string())
+                .show_ui(ui, |ui| {
+                    let edit_mode = &mut self.source_edit_mode;
+
+                    for mode in SourceEditMode::iter() {
+                        ui.selectable_value(edit_mode, mode.clone(), mode.to_string());
+                    }
+                });
+
+            // TODO: Add proper modes
+            // Source code editor
+            match self.source_edit_mode {
+                SourceEditMode::Byte => {
+                    ui.label("Under Construction");
+                }
+                SourceEditMode::Instruction => {
+                    ui.label("Under Construction");
+                }
+                SourceEditMode::Assembly => {
+                    #[cfg(debug_assertions)]
+                    egui::ScrollArea::both().max_height(400.0).show(ui, |ui| {
+                        CodeEditor::default()
+                            .id_source("code editor")
+                            .with_rows(12)
+                            .with_fontsize(12.0)
+                            .with_theme(ColorTheme::AYU_DARK)
+                            .with_syntax(Syntax::vole())
+                            .with_numlines(true)
+                            .show(ui, &mut self.source_code);
+                    });
+
+                    #[cfg(not(debug_assertions))]
+                    ui.label("Under Construction");
+                }
+            }
 
             ui.separator();
 
-            ui.heading("text");
+            if ui.button("Run").clicked() {
+                // TODO: Run code
+            }
 
-            ui.collapsing("Theme", |ui| {
-                ui.label("text");
+            ui.separator();
+
+            ui.collapsing("Output", |ui| {
+                // TODO: Save as text file
+                ui.label("Under construction");
             });
         });
 

@@ -19,6 +19,10 @@ eframe = { version = "0.31", default-features = false, features = [
 egui_code_editor = { path = "crates/egui_code_editor" }
 log = "0.4"
 
+# Enum iterators
+strum = "0.26"
+strum_macros = "0.26"
+
 # App persistence
 serde = { version = "1", features = ["derive"] }
 

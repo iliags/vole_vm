@@ -2,8 +2,8 @@
 pub mod vole;
 
 // UI
-mod app;
-pub use app::VoleUI;
+mod ui;
+pub use ui::VoleUI;
 
 /// Storage key used for the app
 pub const APP_KEY: &str = "vole";
