@@ -30,7 +30,7 @@ impl Vole {
         }
     }
 
-    /// Loads the given rom into the memory range starting at 0
+    /// Loads the given rom into memory starting at 0
     pub fn load_rom(&mut self, rom: &[i8]) {
         if rom.len() < self.memory.len() {
             self.memory[0..rom.len()].copy_from_slice(rom);
@@ -41,6 +41,12 @@ impl Vole {
     pub fn load_rom_offset(&mut self, rom: &[i8], offset: usize) {
         if rom.len() < self.memory.len() - offset {
             self.memory[offset..offset + rom.len()].copy_from_slice(rom);
+        } else {
+            // TODO: UI notification
+            println!(
+                "The ROM is too large to fit into memory at the offset {:#X}",
+                offset
+            )
         }
     }
 
@@ -71,33 +77,30 @@ impl Vole {
 
     /// Perform a fetch-decode-execute cycle
     pub fn cycle(&mut self) {
+        // Fetch
         self.ir = ((self.memory[self.pc as usize] as u16) << 8)
             | (self.memory[(self.pc + 1) as usize]) as u16;
-
-        //println!("Opcode: {:#X}", self.ir);
-
-        // Increment program counter
-        self.pc += 2;
 
         // Break the opcode into nibbles
         let r = ((self.ir & 0x0F00) >> 8) as u8;
         let s = ((self.ir & 0x00F0) >> 4) as u8;
         let t = (self.ir & 0x000F) as u8;
-        let xy = (self.ir & 0x00FF) as u8;
+        let xy_index = (self.ir & 0x00FF) as u8;
 
-        // Execute opcode
+        // Decode (match statement) and execute opcode (match arms)
         match self.ir & 0xF000 {
             0x1000 => {
                 // Load register R with memory XY
-                self.registers[r as usize] = self.memory[xy as usize];
+                self.registers[r as usize] = self.memory[xy_index as usize];
             }
             0x2000 => {
                 // Load register R with XY
-                self.registers[r as usize] = xy as i8;
+                // Reinterprets XY as an i8 since it's directly loaded into a register
+                self.registers[r as usize] = (self.ir & 0x00FF) as i8;
             }
             0x3000 => {
                 // Store register R into memory XY
-                self.memory[xy as usize] = self.registers[r as usize];
+                self.memory[xy_index as usize] = self.registers[r as usize];
             }
             0x4000 => {
                 // Move register S into register R
@@ -138,7 +141,7 @@ impl Vole {
             0xB000 => {
                 // Jump to the instruction at memory XY if register R equals register 0
                 if self.registers[r as usize] == self.registers[0] {
-                    self.pc = xy as u16;
+                    self.pc = xy_index as u16;
                 }
             }
             0xC000 => {
@@ -149,5 +152,8 @@ impl Vole {
                 panic!("Invalid opcode: {:#X}", self.ir);
             }
         }
+
+        // Increment program counter
+        self.pc += 2;
     }
 }
