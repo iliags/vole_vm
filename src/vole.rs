@@ -32,6 +32,7 @@ impl Vole {
 
     /// Loads the given rom into memory starting at 0
     pub fn load_rom(&mut self, rom: &[u8]) {
+        // TODO: Fix this
         if rom.len() <= self.memory.len() {
             self.memory[0..rom.len()].clone_from_slice(rom);
         }
@@ -39,6 +40,7 @@ impl Vole {
 
     /// Loads the given rom into memory starting at the given offset
     pub fn load_rom_offset(&mut self, rom: &[u8], offset: usize) {
+        // TODO: Fix this
         if rom.len() <= self.memory.len() - offset {
             self.memory[offset..offset + rom.len()].clone_from_slice(rom);
         } else {

@@ -32,7 +32,7 @@ in Section 1.7 and summarized in Figure 1.24.
 
 ### Specification Notes
 
-The specification has the machine implement aspects of knowledge which is covered in the book, however it doesn't specify concrete types for the memory and registers. Based solely on the specification, signed 8-bit integers would be the ideal type for registers and memory values. The floating point operation is an outlier in the specification though. The operation could be implemented manually, however storing the result into the register would likely cause information loss or an incorrect result when being read back.
+The specification has the machine implement aspects of knowledge which is covered in the book, however it doesn't specify concrete types for the memory and registers. Based solely on the specification, signed 8-bit integers would be the ideal type for registers and memory values, however this doesn't work in practice. The floating point operation could be implemented manually, however storing the result into the register would likely cause information loss or an incorrect result when being read back.
 
 ## Attribution
 
