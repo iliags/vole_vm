@@ -1,9 +1,36 @@
+use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
+
+const DEMO_ROM: &str = "; Load 0x00 into r0
+0x20, 0x00,
+
+; Load 0xFF into r5
+0x25, 0xFF,
+
+; Load mem 0x44 into r4
+0x14, 0x44,
+
+; If r4 == r0, jump to mem 0x0A (skip next line)
+0xB4, 0x0A,
+
+; Load 0x01 into r5
+0x25, 0x01,
+
+; Store r5 into mem 0x46
+0x35, 0x46,
+
+;Quit
+0xC0, 0x00,
+";
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct VoleUI {
     // Example stuff:
     label: String,
+
+    #[serde(skip)]
+    source_code: String,
 
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
@@ -14,6 +41,7 @@ impl Default for VoleUI {
         Self {
             // Example stuff:
             label: "Hello World!".to_owned(),
+            source_code: DEMO_ROM.to_owned(),
             value: 2.7,
         }
     }
@@ -48,11 +76,8 @@ impl eframe::App for VoleUI {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
-        //*self = VoleUI::default();
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
-
             egui::menu::bar(ui, |ui| {
                 // Github icon
                 ui.hyperlink_to("\u{E624}", "https://github.com/iliags/vole_vm")
@@ -65,9 +90,30 @@ impl eframe::App for VoleUI {
             });
         });
 
+        egui::Window::new("Program Source Code").show(ctx, |ui| {
+            egui::ScrollArea::both().max_height(400.0).show(ui, |ui| {
+                CodeEditor::default()
+                    .id_source("code editor")
+                    .with_rows(12)
+                    .with_fontsize(12.0)
+                    .with_theme(ColorTheme::AYU_DARK)
+                    .with_syntax(Syntax::asm())
+                    .with_numlines(true)
+                    .show(ui, &mut self.source_code);
+            });
+
+            ui.separator();
+
+            ui.heading("text");
+
+            ui.collapsing("Theme", |ui| {
+                ui.label("text");
+            });
+        });
+
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("eframe template");
+            ui.heading("Vole Virtual Machine");
 
             ui.horizontal(|ui| {
                 ui.label("Write something: ");
