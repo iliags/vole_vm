@@ -1,6 +1,6 @@
 {
-  "name": "egui Template PWA",
-  "short_name": "egui-template-pwa",
+  "name": "vole_vm PWA",
+  "short_name": "vole_vm",
   "icons": [
     {
       "src": "./assets/icon-256.png",
