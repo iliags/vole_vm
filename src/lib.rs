@@ -1,4 +1,6 @@
-#![warn(clippy::all, rust_2018_idioms)]
+// Vole machine
+pub mod vole;
 
+// UI
 mod app;
 pub use app::TemplateApp;
