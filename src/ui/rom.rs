@@ -1,6 +1,6 @@
 #[derive(Debug, Default)]
 pub struct Rom {
-    bytes: Vec<i8>,
+    bytes: Vec<u8>,
 }
 
 impl Rom {
@@ -10,11 +10,11 @@ impl Rom {
         }
     }
 
-    pub fn bytes(&self) -> &[i8] {
+    pub fn bytes(&self) -> &[u8] {
         &self.bytes
     }
 
-    pub fn bytes_mut(&mut self) -> &mut [i8] {
+    pub fn bytes_mut(&mut self) -> &mut [u8] {
         &mut self.bytes
     }
 }

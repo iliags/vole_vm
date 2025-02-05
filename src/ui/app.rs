@@ -28,19 +28,8 @@ const DEMO_SOURCE: &str = "; Load 0x00 into r0
 ;Quit
 0xC0, 0x00,";
 
-const DEMO_ROM: &[i8] = &[
-    0x20,
-    0x00,
-    0x25,
-    0xFFu8 as i8,
-    0x14,
-    0x44,
-    0xB4u8 as i8,
-    0x0A,
-    0x35,
-    0x46,
-    0xC0u8 as i8,
-    0x00,
+const DEMO_ROM: &[u8] = &[
+    0x20, 0x00, 0x25, 0xFF, 0x14, 0x44, 0xB4, 0x0A, 0x35, 0x46, 0xC0, 0x00,
 ];
 
 const HEX_STR: &str = "^(0x|0X)?[a-fA-F0-9]+$";
@@ -83,12 +72,15 @@ pub struct VoleUI {
 
 impl Default for VoleUI {
     fn default() -> Self {
+        let mut new_rom = Rom::new();
+        new_rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
         Self {
             label: "Hello World!".to_owned(),
             source_code: DEMO_SOURCE.to_owned(),
             source_edit_mode: SourceEditMode::Byte,
             numeric_display: NumericDisplay::Hex,
-            rom: Rom::new(),
+            //rom: Rom::new(),
+            rom: new_rom,
             active_cell_index: None,
             active_cell_string: "".to_owned(),
             hex_regex: Regex::new(HEX_STR).unwrap(),
@@ -128,6 +120,7 @@ impl eframe::App for VoleUI {
         // TODO: Add cycle speed
         if self.vole.running() {
             self.vole.cycle();
+            ctx.request_repaint();
         }
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -243,7 +236,7 @@ impl eframe::App for VoleUI {
                                                     NumericDisplay::Binary => 2,
                                                 };
 
-                                                let result = i8::from_str_radix(
+                                                let result = u8::from_str_radix(
                                                     byte_string.trim_start_matches(prefix),
                                                     radix,
                                                 );
@@ -285,8 +278,9 @@ impl eframe::App for VoleUI {
 
             if ui.button("Run").clicked() {
                 // TODO: Run code
+                //println!("{:?}", self.rom.bytes());
                 self.vole.load_rom(self.rom.bytes());
-                //self.vole.start();
+                self.vole.start();
             }
 
             ui.separator();

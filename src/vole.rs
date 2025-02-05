@@ -1,6 +1,6 @@
 pub struct Vole {
-    memory: Vec<i8>,
-    registers: Vec<i8>,
+    memory: Vec<u8>,
+    registers: Vec<u8>,
 
     // Program Counter
     pc: u16,
@@ -31,16 +31,16 @@ impl Vole {
     }
 
     /// Loads the given rom into memory starting at 0
-    pub fn load_rom(&mut self, rom: &[i8]) {
-        if rom.len() < self.memory.len() {
-            self.memory[0..rom.len()].copy_from_slice(rom);
+    pub fn load_rom(&mut self, rom: &[u8]) {
+        if rom.len() <= self.memory.len() {
+            self.memory[0..rom.len()].clone_from_slice(rom);
         }
     }
 
     /// Loads the given rom into memory starting at the given offset
-    pub fn load_rom_offset(&mut self, rom: &[i8], offset: usize) {
-        if rom.len() < self.memory.len() - offset {
-            self.memory[offset..offset + rom.len()].copy_from_slice(rom);
+    pub fn load_rom_offset(&mut self, rom: &[u8], offset: usize) {
+        if rom.len() <= self.memory.len() - offset {
+            self.memory[offset..offset + rom.len()].clone_from_slice(rom);
         } else {
             // TODO: UI notification
             println!(
@@ -66,12 +66,12 @@ impl Vole {
     }
 
     /// Set the value of a memory address
-    pub fn set_memory_value(&mut self, address: i8, value: i8) {
+    pub fn set_memory_value(&mut self, address: u8, value: u8) {
         self.memory[address as usize] = value;
     }
 
     /// Get the value of a memory address
-    pub fn memory_value(&mut self, address: i8) -> i8 {
+    pub fn memory_value(&mut self, address: u8) -> u8 {
         self.memory[address as usize]
     }
 
@@ -82,6 +82,11 @@ impl Vole {
         */
         self.ir = ((self.memory[self.pc as usize] as u16) << 8)
             | (self.memory[(self.pc + 1) as usize]) as u16;
+
+        //println!("{:#x}", self.ir);
+
+        // Increment program counter now, the jump instruction overwrite this during the execute step
+        self.pc += 2;
 
         /*
            Decode
@@ -102,7 +107,7 @@ impl Vole {
             0x2000 => {
                 // Load register R with XY
                 // Reinterprets XY as an i8 since it's directly loaded into a register
-                self.registers[r as usize] = (self.ir & 0x00FF) as i8;
+                self.registers[r as usize] = xy_index;
             }
             0x3000 => {
                 // Store register R into memory XY
@@ -114,8 +119,9 @@ impl Vole {
             }
             0x5000 => {
                 // Add register S and register T as twos compliment, store result in R
-                self.registers[r as usize] =
-                    self.registers[s as usize].wrapping_add(self.registers[t as usize])
+                let reg_s = self.registers[s as usize] as i8;
+                let reg_t = self.registers[t as usize] as i8;
+                self.registers[r as usize] = reg_s.wrapping_add(reg_t) as u8;
             }
             0x6000 => {
                 // Due to the specification requirements, this machine converts to the lowest precision available and back to i8.
@@ -123,7 +129,7 @@ impl Vole {
 
                 // Add register S and register T as floating point, store result in R
                 self.registers[r as usize] =
-                    (self.registers[s as usize] as f32 + self.registers[t as usize] as f32) as i8;
+                    (self.registers[s as usize] as f32 + self.registers[t as usize] as f32) as u8;
             }
             0x7000 => {
                 // OR register S and register T, store result in R
@@ -158,8 +164,5 @@ impl Vole {
                 panic!("Invalid opcode: {:#X}", self.ir);
             }
         }
-
-        // Increment program counter
-        self.pc += 2;
     }
 }
