@@ -286,12 +286,15 @@ impl eframe::App for VoleUI {
                 self.vole.start();
             }
 
+            /*
             ui.separator();
+
 
             ui.collapsing("Output", |ui| {
                 // TODO: Save as text file
                 ui.label("Under construction");
             });
+             */
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
