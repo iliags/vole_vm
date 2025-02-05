@@ -18,9 +18,9 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "eframe template",
+        "Vole Virtual Machine",
         native_options,
-        Box::new(|cc| Ok(Box::new(vole_vm::TemplateApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(vole_vm::VoleUI::new(cc)))),
     )
 }
 
@@ -50,7 +50,7 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(vole_vm::TemplateApp::new(cc)))),
+                Box::new(|cc| Ok(Box::new(vole_vm::VoleUI::new(cc)))),
             )
             .await;
 
