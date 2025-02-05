@@ -1,87 +1,35 @@
-# eframe template
+# Vole Virtual Machine
 
-[![dependency status](https://deps.rs/repo/github/emilk/eframe_template/status.svg)](https://deps.rs/repo/github/emilk/eframe_template)
-[![Build Status](https://github.com/emilk/eframe_template/workflows/CI/badge.svg)](https://github.com/emilk/eframe_template/actions?workflow=CI)
+An implementation of the virtual machine as specified in *Computer Science: An Overview (13th edition)* by Glenn Brookshear and Dennis Brylow.
 
-This is a template repo for [eframe](https://github.com/emilk/egui/tree/master/crates/eframe), a framework for writing apps using [egui](https://github.com/emilk/egui/).
+## Specification
 
-The goal is for this to be the simplest way to get started writing a GUI app in Rust.
-
-You can compile your app natively or for the web, and share it using Github Pages.
-
-## Getting started
-
-Start by clicking "Use this template" at https://github.com/emilk/eframe_template/ or follow [these instructions](https://docs.github.com/en/free-pro-team@latest/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template).
-
-Change the name of the crate: Choose a good name for your project, and change the name to it in:
-* `Cargo.toml`
-    * Change the `package.name` from `eframe_template` to `your_crate`.
-    * Change the `package.authors`
-* `main.rs`
-    * Change `eframe_template::TemplateApp` to `your_crate::TemplateApp`
-* `index.html`
-    * Change the `<title>eframe template</title>` to `<title>your_crate</title>`. optional.
-* `assets/sw.js`
-  * Change the `'./eframe_template.js'` to `./your_crate.js` (in `filesToCache` array)
-  * Change the `'./eframe_template_bg.wasm'` to `./your_crate_bg.wasm` (in `filesToCache` array)
-
-Alternatively, you can run `fill_template.sh` which will ask for the needed names and email and perform the above patches for you. This is particularly useful if you clone this repository outside GitHub and hence cannot make use of its
-templating function.
-
-### Learning about egui
-
-`src/app.rs` contains a simple example app. This is just to give some inspiration - most of it can be removed if you like.
-
-The official egui docs are at <https://docs.rs/egui>. If you prefer watching a video introduction, check out <https://www.youtube.com/watch?v=NtUkr_z7l84>. For inspiration, check out the [the egui web demo](https://emilk.github.io/egui/index.html) and follow the links in it to its source code.
-
-### Testing locally
-
-Make sure you are using the latest version of stable rust by running `rustup update`.
-
-`cargo run --release`
-
-On Linux you need to first run:
-
-`sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev`
-
-On Fedora Rawhide you need to run:
-
-`dnf install clang clang-devel clang-tools-extra libxkbcommon-devel pkg-config openssl-devel libxcb-devel gtk3-devel atk fontconfig-devel`
-
-### Web Locally
-
-You can compile your app to [WASM](https://en.wikipedia.org/wiki/WebAssembly) and publish it as a web page.
-
-We use [Trunk](https://trunkrs.dev/) to build for web target.
-1. Install the required target with `rustup target add wasm32-unknown-unknown`.
-2. Install Trunk with `cargo install --locked trunk`.
-3. Run `trunk serve` to build and serve on `http://127.0.0.1:8080`. Trunk will rebuild automatically if you edit the project.
-4. Open `http://127.0.0.1:8080/index.html#dev` in a browser. See the warning below.
-
-> `assets/sw.js` script will try to cache our app, and loads the cached version when it cannot connect to server allowing your app to work offline (like PWA).
-> appending `#dev` to `index.html` will skip this caching, allowing us to load the latest builds during development.
-
-### Web Deploy
-1. Just run `trunk build --release`.
-2. It will generate a `dist` directory as a "static html" website
-3. Upload the `dist` directory to any of the numerous free hosting websites including [GitHub Pages](https://docs.github.com/en/free-pro-team@latest/github/working-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
-4. we already provide a workflow that auto-deploys our app to GitHub pages if you enable it.
-> To enable Github Pages, you need to go to Repository -> Settings -> Pages -> Source -> set to `gh-pages` branch and `/` (root).
+> Appendix C
+> Let us say that our Vole computer has 16 general-purpose registers numbered 0x0 through 0xF. Each register is one byte (eight bits) long. For identifying registers within instructions, each register is assigned the unique four-bit pattern that represents its register number. Thus, register 0x0 is identified by binary 0000, and register 0x4 is identified by binary 0100. There are 256 cells in the Vole’s main memory. Each cell is assigned a unique address consisting of an integer in the range of 0 to 255. An address can therefore be represented by a pattern of eight bits ranging from 00000000 to 11111111 (or a hexadecimal value in the range of 0x00 to 0xFF).
 >
-> If `gh-pages` is not available in `Source`, just create and push a branch called `gh-pages` and it should be available.
+> Floating-point values are assumed to be stored in an eight-bit format discussed
+in Section 1.7 and summarized in Figure 1.24.
 >
-> If you renamed the `main` branch to something else (say you re-initialized the repository with `master` as the initial branch), be sure to edit the github workflows `.github/workflows/pages.yml` file to reflect the change
-> ```yml
-> on:
->   push:
->     branches:
->       - <branch name>
-> ```
+> Each Vole machine instruction is two bytes long. The first 4 bits provide the op-code; the last 12 bits make up the operand field. The table that follows lists the instructions in hexadecimal notation together with a short description of each. The letters R, S, and T are used in place of hexadecimal digits in those fields representing a register identifier that varies depending on the particular application of the instruction. The letters X and Y are used in lieu of hexadecimal digits in variable fields not representing a register.
 
-You can test the template app at <https://emilk.github.io/eframe_template/>.
+| Op-code | Operand | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+|---------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 0x1     | RXY     | LOAD the register R with the bit pattern found in the memory cell whose address is XY. Example: 0x14A3 would cause the contents of the memory cell located at address 0xA3 to be placed in register 0x4.                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 0x2     | RXY     | LOAD the register R with the bit pattern XY. Example: 0x20A3 would cause the value 0xA3 to be placed in register 0.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 0x3     | RXY     | STORE the bit pattern found in register R in the memory cell whose address is XY. Example: 0x35B1 would cause the contents of register 0x5 to be placed in the memory cell whose address is 0xB1.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 0x4     | 0RS     | MOVE the bit pattern found in register R to register S. Example: 0x40A4 would cause the contents of register 0xA to be copied into register 0x4.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 0x5     | RST     | ADD the bit patterns in registers S and T as though they were two’s complement representations and leave the result in register R. Example: 0x5726 would cause the binary values in registers 0x2 and 0x6 to be added and the sum placed in register 0x7.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 0x6     | RST     | ADD the bit patterns in registers S and T as though they represented values in floating-point notation and leave the floating-point result in register R. Example: 0x634E would cause the values in registers 0x4 and 0xE to be added as floating-point values and the result to be placed in register 0x3.                                                                                                                                                                                                                                                                                                                                                                       |
+| 0x7     | RST     | OR the bit patterns in registers S and T and place the result in register R. Example: 0x7CB4 would cause the result of ORing the contents of registers 0xB and 0x4 to be placed in register 0xC.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 0x8     | RST     | AND the bit patterns in registers S and T and place the result in register R. Example: 0x8045 would cause the result of ANDing the contents of registers 0x4 and 0x5 to be placed in register 0x0.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 0x9     | RST     | XOR the bit patterns in registers S and T and place the result in register R. Example: 0x95F3 would cause the result of XORing the contents of registers 0xF and 0x3 to be placed in register 0x5.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 0xA     | R0X     | ROTATE the bit pattern in register R one bit to the right X times. Each time, place the bit that started at the loworder end at the high-order end. Example: 0xA403 would cause the contents of register 0x4 to be rotated 3 bits to the right in a circular fashion.                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 0xB     | RXY     | JUMP to the instruction located in the memory cell at address XY if the bit pattern in register R is equal to the bit pattern in register number 0. Otherwise, continue with the normal sequence of execution. (The jump is implemented by copying XY into the program counter during the execute phase.) Example: 0xB43C would first compare the contents of register 0x4 with the contents of register 0x0. If the two were equal, the pattern 0x3C would be placed in the program counter so that the next instruction executed would be the one located at that memory address. Otherwise, nothing would be done and program execution would continue in its normal sequence. |
+| 0xC     | 000     | HALT execution. Example: 0xC000 would cause program execution to stop.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 
-## Updating egui
+> Section 1.7
+> We first designate the high-order bit of the byte as the sign bit. Once again, a 0 in the sign bit will mean that the value stored is nonnegative, and a 1 will mean that the value is negative. Next, we divide the remaining 7 bits of the byte into two groups, or fields: the exponent field and the mantissa field. Let us designate the 3 bits following the sign bit as the exponent field and the remaining 4 bits as the mantissa field.
 
-As of 2023, egui is in active development with frequent releases with breaking changes. [eframe_template](https://github.com/emilk/eframe_template/) will be updated in lock-step to always use the latest version of egui.
+## Specification Notes
 
-When updating `egui` and `eframe` it is recommended you do so one version at the time, and read about the changes in [the egui changelog](https://github.com/emilk/egui/blob/master/CHANGELOG.md) and [eframe changelog](https://github.com/emilk/egui/blob/master/crates/eframe/CHANGELOG.md).
+TODO
