@@ -77,17 +77,23 @@ impl Vole {
 
     /// Perform a fetch-decode-execute cycle
     pub fn cycle(&mut self) {
-        // Fetch
+        /*
+           Fetch
+        */
         self.ir = ((self.memory[self.pc as usize] as u16) << 8)
             | (self.memory[(self.pc + 1) as usize]) as u16;
 
-        // Break the opcode into nibbles
+        /*
+           Decode
+        */
         let r = ((self.ir & 0x0F00) >> 8) as u8;
         let s = ((self.ir & 0x00F0) >> 4) as u8;
         let t = (self.ir & 0x000F) as u8;
         let xy_index = (self.ir & 0x00FF) as u8;
 
-        // Decode (match statement) and execute opcode (match arms)
+        /*
+           Execute
+        */
         match self.ir & 0xF000 {
             0x1000 => {
                 // Load register R with memory XY
@@ -112,7 +118,7 @@ impl Vole {
                     self.registers[s as usize].wrapping_add(self.registers[t as usize])
             }
             0x6000 => {
-                // Due to the conflicting specification requirements, this machine converts to the lowest precision available and back to u8.
+                // Due to the specification requirements, this machine converts to the lowest precision available and back to i8.
                 // TODO: Implement the FP operation as described in the book
 
                 // Add register S and register T as floating point, store result in R
