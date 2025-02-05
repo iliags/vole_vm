@@ -1,7 +1,8 @@
+use egui::scroll_area::ScrollBarVisibility;
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 use strum::IntoEnumIterator;
 
-use super::SourceEditMode;
+use super::{rom::ROM, SourceEditMode};
 
 const DEMO_ROM: &str = "; Load 0x00 into r0
 0x20, 0x00,
@@ -24,6 +25,8 @@ const DEMO_ROM: &str = "; Load 0x00 into r0
 ;Quit
 0xC0, 0x00,";
 
+const HEX_STR: &str = "^(0x|0X)?[a-fA-F0-9]+$";
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -37,18 +40,25 @@ pub struct VoleUI {
     #[serde(skip)]
     source_edit_mode: SourceEditMode,
 
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
+    #[serde(skip)]
+    rom: ROM,
+
+    #[serde(skip)]
+    active_cell_index: Option<usize>,
+
+    #[serde(skip)]
+    active_cell_string: String,
 }
 
 impl Default for VoleUI {
     fn default() -> Self {
         Self {
-            // Example stuff:
             label: "Hello World!".to_owned(),
             source_code: DEMO_ROM.to_owned(),
-            source_edit_mode: SourceEditMode::Instruction,
-            value: 2.7,
+            source_edit_mode: SourceEditMode::Byte,
+            rom: ROM::new(),
+            active_cell_index: None,
+            active_cell_string: "".to_owned(),
         }
     }
 }
@@ -101,7 +111,7 @@ impl eframe::App for VoleUI {
         */
         egui::Window::new("Program Source Code").show(ctx, |ui| {
             // Source edit mode selection
-            egui::ComboBox::from_label("")
+            egui::ComboBox::from_label("Edit mode")
                 .selected_text(self.source_edit_mode.to_string())
                 .show_ui(ui, |ui| {
                     let edit_mode = &mut self.source_edit_mode;
@@ -111,11 +121,61 @@ impl eframe::App for VoleUI {
                     }
                 });
 
+            ui.separator();
+
             // TODO: Add proper modes
             // Source code editor
             match self.source_edit_mode {
                 SourceEditMode::Byte => {
-                    ui.label("Under Construction");
+                    egui::ScrollArea::vertical()
+                        .max_height(300.0)
+                        .auto_shrink(false)
+                        .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
+                        .show(ui, |ui| {
+                            egui::Grid::new("byte_grid")
+                                .striped(true)
+                                .num_columns(2)
+                                .show(ui, |ui| {
+                                    for (i, byte) in self.rom.bytes_mut().iter_mut().enumerate() {
+                                        let byte_index = format!("{:#X}", i);
+                                        ui.label(byte_index);
+
+                                        let mut byte_string = if self
+                                            .active_cell_index
+                                            .is_some_and(|index| index == i)
+                                        {
+                                            self.active_cell_string.clone()
+                                        } else {
+                                            format!("{:#X}", byte)
+                                        };
+
+                                        let response =
+                                            ui.add(egui::TextEdit::singleline(&mut byte_string));
+
+                                        if self.active_cell_index.is_some_and(|index| index == i) {
+                                            if response.changed() {
+                                                // If the string doesn't have a
+
+                                                self.active_cell_string = byte_string;
+                                            } else if response.lost_focus() {
+                                                // TODO: Save
+
+                                                *byte = match byte_string.parse::<i8>() {
+                                                    Ok(v) => v,
+                                                    _ => 0,
+                                                };
+                                            }
+                                        } else if response.gained_focus() {
+                                            self.active_cell_index = Some(i);
+                                            self.active_cell_string = byte_string;
+                                        }
+
+                                        //response.clicked()
+
+                                        ui.end_row();
+                                    }
+                                });
+                        });
                 }
                 SourceEditMode::Instruction => {
                     ui.label("Under Construction");
@@ -160,11 +220,6 @@ impl eframe::App for VoleUI {
                 ui.label("Write something: ");
                 ui.text_edit_singleline(&mut self.label);
             });
-
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
-            }
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |_ui| {
                 //egui::warn_if_debug_build(ui);
