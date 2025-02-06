@@ -2,6 +2,29 @@
 
 An implementation of the virtual machine as specified in *Computer Science: An Overview (13th edition)* by Glenn Brookshear and Dennis Brylow.
 
+## Building
+
+### Desktop
+
+>[!NOTE]
+> Linux users may need to run `sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev`
+
+- Install [rust](https://www.rust-lang.org/tools/install)
+- Open a terminal in the repository location
+  - Most operating systems have an option to open a terminal in the current folder when right clicking in the file browser.
+- Enter ```cargo build --release``` to build but not execute, ```cargo run --release``` to build and execute
+  - The ```--release``` flag can be removed to build the development version
+
+### WASM
+
+- Install [rust](https://www.rust-lang.org/tools/install)
+- Install trunk using ```cargo binstall trunk``` (recommended on Windows) or ```cargo install trunk```
+  - This may take a while
+- Open a terminal in the repository location:
+  - Build only ```trunk build --release```
+  - Build and start a local web server ```trunk serve --release```
+  - Trunk will output the files in the `dist` folder which is created if it doesn't exist.
+
 ## Specification
 
 > Appendix C
