@@ -564,6 +564,29 @@ impl eframe::App for VoleUI {
         */
         egui::CentralPanel::default().show(ctx, |ui| {
             /*
+               State
+            */
+            ui.group(|ui| {
+                ui.heading("State");
+                ui.horizontal(|ui| {
+                    let pc_text = format!(
+                        "Program Counter: {}",
+                        self.numeric_display
+                            .byte_string(self.vole.program_counter())
+                    );
+                    ui.label(pc_text);
+                });
+                ui.horizontal(|ui| {
+                    let ir_text = format!(
+                        "Index Register: {}",
+                        self.numeric_display
+                            .instruction_string(self.vole.instruction_register())
+                    );
+                    ui.label(ir_text);
+                });
+            });
+
+            /*
                 Registers
             */
             ui.group(|ui| {
@@ -606,29 +629,6 @@ impl eframe::App for VoleUI {
                             ui.end_row();
                         }
                     });
-            });
-
-            /*
-               State
-            */
-            ui.group(|ui| {
-                ui.heading("State");
-                ui.horizontal(|ui| {
-                    let pc_text = format!(
-                        "Program Counter: {}",
-                        self.numeric_display
-                            .byte_string(self.vole.program_counter())
-                    );
-                    ui.label(pc_text);
-                });
-                ui.horizontal(|ui| {
-                    let ir_text = format!(
-                        "Index Register: {}",
-                        self.numeric_display
-                            .instruction_string(self.vole.instruction_register())
-                    );
-                    ui.label(ir_text);
-                });
             });
 
             /*
