@@ -194,7 +194,7 @@ impl Vole {
                 }
             }
             0xC000 => {
-                println!("Exiting");
+                //println!("Exiting");
                 self.running = false;
             }
             _ => {
