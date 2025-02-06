@@ -156,14 +156,10 @@ impl eframe::App for VoleUI {
         if self.vole.running() {
             // TODO: Use actual delta time
             self.cycle_timer += 1.0 / 60.0;
-            let limit = if self.cycle_speed > 0 {
-                (1 / self.cycle_speed) as f32
-            } else {
-                0.0
-            };
+            //let limit = self.cycle_speed * 1000;
 
-            if self.cycle_timer >= limit {
-                //println!("Cycle");
+            if self.cycle_timer >= self.cycle_speed as f32 {
+                println!("Cycle");
                 self.cycle_timer = 0.0;
                 self.vole.cycle();
             }
@@ -454,7 +450,7 @@ impl eframe::App for VoleUI {
                     self.vole.load_rom(self.rom.bytes());
                     self.vole.start(StartMode::Reset);
                     self.cycle_speed = self.execution_speed.max(1);
-                    self.cycle_timer = (1 / self.execution_speed) as f32;
+                    self.cycle_timer = self.execution_speed as f32;
                 }
 
                 #[cfg(debug_assertions)]
@@ -525,8 +521,7 @@ impl eframe::App for VoleUI {
            Visualizer panel
         */
         egui::CentralPanel::default().show(ctx, |ui| {
-            Frame::canvas(ui.style()).show(ui, |_ui| {
-                /*
+            Frame::canvas(ui.style()).show(ui, |ui| {
                 let color = if ui.visuals().dark_mode {
                     Color32::from_additive_luminance(196)
                 } else {
@@ -546,7 +541,7 @@ impl eframe::App for VoleUI {
 
                 let mut shapes = vec![];
 
-                 for &mode in &[2, 3, 5] {
+                for &mode in &[2, 3, 5] {
                     let mode = mode as f64;
                     let n = 120;
                     let speed = 1.5;
@@ -582,7 +577,6 @@ impl eframe::App for VoleUI {
                 }
 
                 ui.painter().extend(shapes);
-                */
             });
         });
     }
