@@ -11,6 +11,12 @@ pub struct Vole {
     running: bool,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum StartMode {
+    Reset,
+    KeepState,
+}
+
 impl Default for Vole {
     fn default() -> Self {
         Self {
@@ -58,7 +64,10 @@ impl Vole {
     }
 
     /// Start the machine
-    pub fn start(&mut self) {
+    pub fn start(&mut self, start_mode: StartMode) {
+        if start_mode == StartMode::Reset {
+            self.reset_cpu();
+        }
         self.running = true;
     }
 
@@ -75,6 +84,13 @@ impl Vole {
     /// Get the value of a memory address
     pub fn memory_value(&mut self, address: u8) -> u8 {
         self.memory[address as usize]
+    }
+
+    /// Reset the state of the CPU
+    pub fn reset_cpu(&mut self) {
+        self.ir = 0;
+        self.pc = 0;
+        self.registers = vec![0; 16];
     }
 
     /// Perform a fetch-decode-execute cycle

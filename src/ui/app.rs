@@ -1,5 +1,5 @@
 use super::{rom::Rom, NumericDisplay, SourceEditMode};
-use crate::vole::Vole;
+use crate::vole::{StartMode, Vole};
 use egui::{
     containers::Frame, emath, epaint, epaint::PathStroke, hex_color, lerp, pos2, remap,
     scroll_area::ScrollBarVisibility, vec2, Color32, Pos2, Rect,
@@ -49,6 +49,7 @@ const DEMO_ROM: &[u8] = &[
 const HEX_STR: &str = "^(0x|0X)?[a-fA-F0-9]+$";
 const BINARY_STR: &str = "\\b(0b)?[01]+\\b";
 
+// TODO: Separate execution options from UI
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -90,6 +91,12 @@ pub struct VoleUI {
 
     #[serde(skip)]
     show_export: bool,
+
+    #[serde(skip)]
+    cycle_timer: f32,
+
+    #[serde(skip)]
+    cycle_speed: usize,
 }
 
 impl Default for VoleUI {
@@ -105,13 +112,15 @@ impl Default for VoleUI {
             // TODO: Default
             //rom: Rom::new(),
             rom: new_rom,
-            execution_speed: 10,
+            execution_speed: 1,
             active_cell_index: None,
             active_cell_string: "".to_owned(),
             hex_regex: Regex::new(HEX_STR).unwrap(),
             binary_regex: Regex::new(BINARY_STR).unwrap(),
             vole: Vole::new(),
             show_export: false,
+            cycle_timer: 0.0,
+            cycle_speed: 0,
         }
     }
 }
@@ -145,7 +154,20 @@ impl eframe::App for VoleUI {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // TODO: Add cycle speed
         if self.vole.running() {
-            self.vole.cycle();
+            // TODO: Use actual delta time
+            self.cycle_timer += 1.0 / 60.0;
+            let limit = if self.cycle_speed > 0 {
+                (1 / self.cycle_speed) as f32
+            } else {
+                0.0
+            };
+
+            if self.cycle_timer >= limit {
+                //println!("Cycle");
+                self.cycle_timer = 0.0;
+                self.vole.cycle();
+            }
+
             // TODO: Spin up background thread instead of relying on egui update
             ctx.request_repaint();
         }
@@ -400,23 +422,43 @@ impl eframe::App for VoleUI {
             ui.heading("Execution");
             // TODO Add grid to fill horizontal space
             ui.horizontal(|ui| {
-                if ui.button("Run").clicked() {
+                if ui
+                    .button("Run at full speed")
+                    .on_hover_text("The CPU cycles around 60 times per second.")
+                    .clicked()
+                {
                     self.vole.load_rom(self.rom.bytes());
-                    self.vole.start();
+                    self.vole.start(StartMode::Reset);
+                    self.cycle_speed = 0;
+                    self.cycle_timer = 0.0;
                 }
 
-                /*
-                if ui.button("Run Stepped").clicked() {
+                if ui
+                    .button("Run at execution speed")
+                    .on_hover_text("Executes the program at the execution speed.")
+                    .clicked()
+                {
+                    self.vole.load_rom(self.rom.bytes());
+                    self.vole.start(StartMode::Reset);
+                    self.cycle_speed = self.execution_speed.max(1);
+                    self.cycle_timer = (1 / self.execution_speed) as f32;
+                }
+
+                #[cfg(debug_assertions)]
+                if ui
+                    .button("Run Stepped")
+                    .on_hover_text("Each cycle needs to be manually advanced")
+                    .clicked()
+                {
                     // TODO: Pause after each step of the cycle
                     self.vole.load_rom(self.rom.bytes());
-                    self.vole.start();
+                    self.vole.start(StartMode::Reset);
                 }
-                 */
             });
 
             ui.separator();
 
-            ui.add(egui::Slider::new(&mut self.execution_speed, 0..=100).text("Execution Speed"))
+            ui.add(egui::Slider::new(&mut self.execution_speed, 1..=10).text("Execution Speed"))
                 .on_hover_text("The number of cycles to execute per second.");
 
             ui.separator();
