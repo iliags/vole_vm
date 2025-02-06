@@ -31,8 +31,7 @@ const DEMO_SOURCE: &str = "; Load 0x00 into r0
 0xC0, 0x00,";
  */
 
-const DEMO_SOURCE: &str = "
-ld r0, 0x00        ; Load 0x00 into r0
+const DEMO_SOURCE: &str = "ld r0, 0x00        ; Load 0x00 into r0
 ld r5, 0xFF        ; Load 0xFF into r5
 ld r4, (0x44)      ; Load mem 0x44 into r4
 
@@ -88,6 +87,9 @@ pub struct VoleUI {
 
     #[serde(skip)]
     vole: Vole,
+
+    #[serde(skip)]
+    show_export: bool,
 }
 
 impl Default for VoleUI {
@@ -109,6 +111,7 @@ impl Default for VoleUI {
             hex_regex: Regex::new(HEX_STR).unwrap(),
             binary_regex: Regex::new(BINARY_STR).unwrap(),
             vole: Vole::new(),
+            show_export: false,
         }
     }
 }
@@ -147,6 +150,9 @@ impl eframe::App for VoleUI {
             ctx.request_repaint();
         }
 
+        /*
+            Menu bar at the top
+        */
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 // Github icon
@@ -269,7 +275,6 @@ impl eframe::App for VoleUI {
                         });
                 }
                 SourceEditMode::Instruction => {
-                    ui.label("Under Construction");
                     egui::ScrollArea::vertical()
                         .max_height(400.0)
                         .auto_shrink(false)
@@ -286,12 +291,10 @@ impl eframe::App for VoleUI {
                                             ui.label("Contents");
                                             ui.end_row();
                                         }
-                                        let offset = if i == 0 { 0 } else { 2 };
                                         let start_byte =
-                                            self.numeric_display.byte_string((i * offset) as u8);
-                                        let end_byte = self
-                                            .numeric_display
-                                            .byte_string((i * offset + 1) as u8);
+                                            self.numeric_display.byte_string((i * 2) as u8);
+                                        let end_byte =
+                                            self.numeric_display.byte_string((i * 2 + 1) as u8);
 
                                         ui.label(format!("{}-{}", start_byte, end_byte));
 
@@ -387,13 +390,11 @@ impl eframe::App for VoleUI {
             }
             ui.separator();
 
-            /*
-            ui.collapsing("Export", |ui| {
-                // TODO: Save as text file
-                ui.label("Under construction");
-            });
+            if ui.button("Export").clicked() {
+                self.show_export = true;
+            }
+
             ui.separator();
-             */
 
             ui.heading("Execution");
             // TODO Add grid to fill horizontal space
@@ -420,6 +421,60 @@ impl eframe::App for VoleUI {
             ui.separator();
         });
 
+        /*
+            Export program window
+        */
+        egui::Window::new("Export")
+            .open(&mut self.show_export)
+            .show(ctx, |ui| {
+                // Constructing the output string here for copying to the clipboard feature
+                let output_string = match self.source_edit_mode {
+                    SourceEditMode::Byte | SourceEditMode::Instruction => {
+                        // TODO: Output types
+                        let mut output: String = "".to_owned();
+                        for (i, chunk) in self.rom.bytes_mut().chunks_mut(2).enumerate() {
+                            if i == 0 {
+                                output.push_str("Address         Contents\n");
+                            }
+
+                            if chunk[0] == 0 && chunk[1] == 0 {
+                                continue;
+                            }
+
+                            let a0 = self.numeric_display.byte_string((i * 2) as u8);
+                            let a1 = self.numeric_display.byte_string((i * 2 + 1) as u8);
+                            let row_string = if self.source_edit_mode == SourceEditMode::Byte {
+                                let b0 = self.numeric_display.byte_string(chunk[0]);
+                                let b1 = self.numeric_display.byte_string(chunk[1]);
+                                let spacing = "            ";
+                                format!("{}{}{}\n{}{}{}\n", a0, spacing, b0, a1, spacing, b1)
+                            } else {
+                                let a = format!("{}-{}", a0, a1);
+                                let b = self
+                                    .numeric_display
+                                    .instruction_string(((chunk[0] as u16) << 8) | chunk[1] as u16);
+                                format!("{}       {}\n", a, b)
+                            };
+                            output.push_str(&row_string);
+                        }
+                        output
+                    }
+                    SourceEditMode::Assembly => self.source_code.clone(),
+                };
+
+                // TODO: Output types
+                ui.label("Under construction");
+                if ui.button("Copy to Clipboard").clicked() {
+                    ctx.copy_text(output_string.clone());
+                }
+                ui.separator();
+
+                ui.label(output_string);
+            });
+
+        /*
+           Visualizer panel
+        */
         egui::CentralPanel::default().show(ctx, |ui| {
             /*
             // The central panel the region left after adding TopPanel's and SidePanel's
