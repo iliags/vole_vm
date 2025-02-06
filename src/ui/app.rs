@@ -199,6 +199,7 @@ impl eframe::App for VoleUI {
             // TODO: Add proper modes
             // Source code editor
             match self.source_edit_mode {
+                // TODO: Merge with instruction mode
                 SourceEditMode::Byte => {
                     egui::ScrollArea::vertical()
                         .max_height(400.0)
