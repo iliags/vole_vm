@@ -17,28 +17,28 @@ impl Syntax {
                 "and",  // AND
                 "xor",  // XOR
                 "rot",  // ROTATE
-                "jr",   // JUMP if zero
+                "jp",   // JUMP if zero
                 "halt", // HALT
             ]),
             types: BTreeSet::from([]),
             special: BTreeSet::from([
                 //8-bit registers
-                "A", // 0x0
-                "B", // 0x1
-                "C", // 0x2
-                "D", // 0x3
-                "E", // 0x4
-                "F", // 0x5
-                "G", // 0x6
-                "H", // 0x7
-                "I", // 0x8
-                "J", // 0x9
-                "K", // 0xA
-                "L", // 0xB
-                "M", // 0xC
-                "N", // 0xD
-                "O", // 0xE
-                "P", // 0xF
+                "r0",  // 0x0
+                "r1",  // 0x1
+                "r2",  // 0x2
+                "r3",  // 0x3
+                "r4",  // 0x4
+                "r5",  // 0x5
+                "r6",  // 0x6
+                "r7",  // 0x7
+                "r8",  // 0x8
+                "r9",  // 0x9
+                "r10", // 0xA
+                "r11", // 0xB
+                "r12", // 0xC
+                "r13", // 0xD
+                "r14", // 0xE
+                "r15", // 0xF
             ]),
         }
     }
