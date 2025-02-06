@@ -420,6 +420,19 @@ impl eframe::App for VoleUI {
             ui.separator();
 
             ui.heading("Execution");
+
+            ui.add(egui::Slider::new(&mut self.execution_speed, 1..=10).text("Execution Speed"))
+                .on_hover_text("The number of cycles to execute per second.");
+
+            #[cfg(debug_assertions)]
+            {
+                let mut text = "0x00";
+                let label = ui.label("Program Counter Start");
+                ui.text_edit_singleline(&mut text).labelled_by(label.id);
+            }
+
+            ui.separator();
+
             // TODO Add grid to fill horizontal space
             ui.horizontal(|ui| {
                 if ui
@@ -446,8 +459,8 @@ impl eframe::App for VoleUI {
 
                 #[cfg(debug_assertions)]
                 if ui
-                    .button("Run Stepped")
-                    .on_hover_text("Each cycle needs to be manually advanced")
+                    .button("Run in steps")
+                    .on_hover_text("Each cycle needs to be manually advanced.")
                     .clicked()
                 {
                     // TODO: Pause after each step of the cycle
@@ -455,13 +468,6 @@ impl eframe::App for VoleUI {
                     self.vole.start(StartMode::Reset);
                 }
             });
-
-            ui.separator();
-
-            ui.add(egui::Slider::new(&mut self.execution_speed, 1..=10).text("Execution Speed"))
-                .on_hover_text("The number of cycles to execute per second.");
-
-            ui.separator();
         });
 
         /*
