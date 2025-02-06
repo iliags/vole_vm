@@ -573,10 +573,8 @@ impl eframe::App for VoleUI {
                         for (i, chunks) in self.vole.registers().chunks(4).enumerate() {
                             for (r, chunk) in chunks.iter().enumerate() {
                                 ui.group(|ui| {
-                                    let register_text = format!(
-                                        "{}",
-                                        self.numeric_display.bit_string((r + (i * 4)) as u8)
-                                    );
+                                    let register_text =
+                                        self.numeric_display.bit_string((r + (i * 4)) as u8);
                                     let label = ui.label(register_text.clone());
 
                                     let mut register = *chunk;
