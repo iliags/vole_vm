@@ -14,6 +14,7 @@ An implementation of the virtual machine as specified in *Computer Science: An O
   - Most operating systems have an option to open a terminal in the current folder when right clicking in the file browser.
 - Enter ```cargo build --release``` to build but not execute, ```cargo run --release``` to build and execute
   - The ```--release``` flag can be removed to build the development version
+- The binary will be located under `target/release/` for release builds and `target/debug/` for development builds
 
 ### WASM
 
@@ -23,7 +24,7 @@ An implementation of the virtual machine as specified in *Computer Science: An O
 - Open a terminal in the repository location:
   - Build only ```trunk build --release```
   - Build and start a local web server ```trunk serve --release```
-  - Trunk will output the files in the `dist` folder which is created if it doesn't exist.
+- Trunk will output the files in the `dist` folder which is created if it doesn't exist.
 
 ## Specification
 
