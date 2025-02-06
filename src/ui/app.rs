@@ -98,7 +98,7 @@ impl Default for VoleUI {
 
         Self {
             source_code: DEMO_SOURCE.to_owned(),
-            source_edit_mode: SourceEditMode::Byte,
+            source_edit_mode: SourceEditMode::Instruction,
             numeric_display: NumericDisplay::Hex,
             // TODO: Default
             //rom: Rom::new(),
@@ -183,6 +183,8 @@ impl eframe::App for VoleUI {
                 });
 
             if ui.button("Load Demo").clicked() {
+                let rom: Vec<u8> = vec![0; 256];
+                self.rom.bytes_mut().copy_from_slice(&&rom);
                 self.rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
             }
 
@@ -249,17 +251,12 @@ impl eframe::App for VoleUI {
                                                     self.active_cell_string = byte_string;
                                                 }
                                             } else if response.lost_focus() {
-                                                let radix = match self.numeric_display {
-                                                    NumericDisplay::Hex => 16,
-                                                    NumericDisplay::Binary => 2,
-                                                };
-
-                                                let result = u8::from_str_radix(
+                                                *byte = u8::from_str_radix(
                                                     byte_string.trim_start_matches(prefix),
-                                                    radix,
-                                                );
-
-                                                *byte = result.unwrap_or(0);
+                                                    self.numeric_display.radix(),
+                                                )
+                                                .unwrap_or(0);
+                                                self.active_cell_index = None;
                                             }
                                         } else if response.gained_focus() {
                                             self.active_cell_index = Some(i);
@@ -273,6 +270,97 @@ impl eframe::App for VoleUI {
                 }
                 SourceEditMode::Instruction => {
                     ui.label("Under Construction");
+                    egui::ScrollArea::vertical()
+                        .max_height(400.0)
+                        .auto_shrink(false)
+                        .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
+                        .show(ui, |ui| {
+                            egui::Grid::new("instruction_grid")
+                                .striped(true)
+                                .num_columns(2)
+                                .show(ui, |ui| {
+                                    for (i, chunk) in self.rom.bytes_mut().chunks_mut(2).enumerate()
+                                    {
+                                        if i == 0 {
+                                            ui.label("Address");
+                                            ui.label("Contents");
+                                            ui.end_row();
+                                        }
+                                        let offset = if i == 0 { 0 } else { 2 };
+                                        let start_byte =
+                                            self.numeric_display.byte_string((i * offset) as u8);
+                                        let end_byte = self
+                                            .numeric_display
+                                            .byte_string((i * offset + 1) as u8);
+
+                                        ui.label(format!("{}-{}", start_byte, end_byte));
+
+                                        let mut byte_string = if self
+                                            .active_cell_index
+                                            .is_some_and(|index| index == i)
+                                        {
+                                            self.active_cell_string.clone()
+                                        } else {
+                                            self.numeric_display.instruction_string(
+                                                ((chunk[0] as u16) << 8) | chunk[1] as u16,
+                                            )
+                                        };
+
+                                        let response =
+                                            ui.add(egui::TextEdit::singleline(&mut byte_string));
+
+                                        if self.active_cell_index.is_some_and(|index| index == i) {
+                                            let prefix = self.numeric_display.prefix();
+
+                                            if response.changed() {
+                                                let within_length = match self.numeric_display {
+                                                    NumericDisplay::Hex => byte_string.len() < 7,
+                                                    NumericDisplay::Binary => {
+                                                        byte_string.len() < 21
+                                                    }
+                                                };
+
+                                                let valid_start = byte_string.starts_with(prefix);
+
+                                                let valid_data = match self.numeric_display {
+                                                    NumericDisplay::Hex => {
+                                                        self.hex_regex.is_match(&byte_string)
+                                                    }
+                                                    NumericDisplay::Binary => {
+                                                        self.binary_regex.is_match(&byte_string)
+                                                    }
+                                                };
+
+                                                if within_length && (valid_data || valid_start) {
+                                                    self.active_cell_string = byte_string;
+                                                }
+                                            } else if response.lost_focus() {
+                                                let radix = self.numeric_display.radix();
+
+                                                let opcode = byte_string
+                                                    .strip_prefix("0x")
+                                                    .unwrap_or_default();
+
+                                                let (lhs, rhs) = opcode.split_at(2);
+
+                                                chunk[0] =
+                                                    u8::from_str_radix(lhs, radix).unwrap_or(0);
+
+                                                chunk[1] =
+                                                    u8::from_str_radix(rhs, radix).unwrap_or(0);
+
+                                                self.active_cell_index = None;
+                                                //println!("0 {:#X}, 1 {:#X}", chunk[0], chunk[1]);
+                                            }
+                                        } else if response.gained_focus() {
+                                            self.active_cell_index = Some(i);
+                                            self.active_cell_string = byte_string;
+                                        }
+
+                                        ui.end_row();
+                                    }
+                                });
+                        });
                 }
                 SourceEditMode::Assembly => {
                     #[cfg(debug_assertions)]

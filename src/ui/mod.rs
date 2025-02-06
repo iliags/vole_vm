@@ -63,4 +63,23 @@ impl NumericDisplay {
             NumericDisplay::Binary => format!("{:#010b}", byte),
         }
     }
+
+    /// Converts the given instruction into a binary or hex string
+    pub fn instruction_string(&self, byte: u16) -> String {
+        match self {
+            NumericDisplay::Hex => format!("0x{:04X}", byte),
+            NumericDisplay::Binary => format!("{:#020b}", byte),
+        }
+    }
+
+    /// Returns the radix for the current numeric display.
+    ///
+    /// Used for converting string numerics into types
+    //#[inline]
+    pub fn radix(&self) -> u32 {
+        match self {
+            NumericDisplay::Hex => 16,
+            NumericDisplay::Binary => 2,
+        }
+    }
 }
