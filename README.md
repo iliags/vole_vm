@@ -47,7 +47,7 @@ Although not part of the specification, there are so few operations that a simpl
 - `or r,s,t` - OR the bit patterns in `s` and `t`, stores the result in register `r`.
 - `and r,s,t` - AND the bit patterns in `s` and `t`, stores the result in register `r`.
 - `xor r,s,t` - XOR the bit patterns in `s` and `t`, stores the result in register `r`.
-- `rot r,x` - Rotate the bit pattern in register `r` one bit to the right `x` times. Each time, place the bit that started at the low order end at the high-order end.
+- `rot r,x` - Rotate the bit pattern in register `r` one bit to the right `x` times. Each time, placing the bit that started at the low order end at the high-order end.
 - `jp r,label` - Jump to the label if register `r` is equal to `r0`
 - `halt` - Stop program execution
 
@@ -83,7 +83,7 @@ Memory is accessed by placing the address number in parentheses.
 Example:
 
 ```asm
-; The following lines are equivalent, load address 254 into register 0
+; The following lines are equivalent, load memory address 254 into register 0
 ld r0,(0xFE)
 ld r0,(254)
 ld r0,(0b11111110)
