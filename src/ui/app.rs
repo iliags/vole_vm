@@ -1,13 +1,6 @@
 use super::{rom::Rom, NumericDisplay, SourceEditMode};
 use crate::vole::{StartMode, Vole};
-use egui::{
-    containers::Frame,
-    emath,
-    epaint::{self, PathStroke},
-    hex_color, lerp, pos2, remap,
-    scroll_area::ScrollBarVisibility,
-    vec2, Color32, Pos2, Rect, Scene, Vec2,
-};
+use egui::{scroll_area::ScrollBarVisibility, Vec2};
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 use regex::Regex;
 use strum::IntoEnumIterator;
@@ -101,9 +94,6 @@ pub struct VoleUI {
 
     #[serde(skip)]
     cycle_speed: usize,
-
-    #[serde(skip)]
-    scene_rect: Rect,
 }
 
 impl Default for VoleUI {
@@ -128,7 +118,6 @@ impl Default for VoleUI {
             show_export: false,
             cycle_timer: 0.0,
             cycle_speed: 0,
-            scene_rect: Rect::ZERO,
         }
     }
 }
@@ -194,7 +183,11 @@ impl eframe::App for VoleUI {
 
                 let numeric = &mut self.numeric_display;
                 for numerics in NumericDisplay::iter() {
-                    ui.selectable_value(numeric, numerics, numerics.to_string());
+                    let response = ui.selectable_value(numeric, numerics, numerics.to_string());
+
+                    if response.clicked() {
+                        response.request_focus();
+                    }
                 }
             });
         });
@@ -206,277 +199,312 @@ impl eframe::App for VoleUI {
             egui::ScrollArea::vertical()
                 //.max_height(400.0)
                 //.auto_shrink(false)
-                .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
-                .show(ui, |ui| {});
-            ui.heading("Program Source Code");
-            // Source edit mode selection
-            egui::ComboBox::from_label("Edit mode")
-                .selected_text(self.source_edit_mode.to_string())
-                .show_ui(ui, |ui| {
-                    let edit_mode = &mut self.source_edit_mode;
-                    for mode in SourceEditMode::iter() {
-                        ui.selectable_value(edit_mode, mode, mode.to_string());
+                //.scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
+                .show(ui, |ui| {
+                    ui.heading("Program Source Code");
+                    // Source edit mode selection
+                    egui::ComboBox::from_label("Edit mode")
+                        .selected_text(self.source_edit_mode.to_string())
+                        .show_ui(ui, |ui| {
+                            let edit_mode = &mut self.source_edit_mode;
+                            for mode in SourceEditMode::iter() {
+                                ui.selectable_value(edit_mode, mode, mode.to_string());
+                            }
+                        });
+
+                    if ui.button("Load Demo").clicked() {
+                        let rom: Vec<u8> = vec![0; 256];
+                        self.rom.bytes_mut().copy_from_slice(&rom);
+                        self.rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
                     }
-                });
 
-            if ui.button("Load Demo").clicked() {
-                let rom: Vec<u8> = vec![0; 256];
-                self.rom.bytes_mut().copy_from_slice(&rom);
-                self.rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
-            }
+                    ui.separator();
 
-            ui.separator();
-
-            // TODO: Add proper modes
-            // Source code editor
-            match self.source_edit_mode {
-                // TODO: Merge with instruction mode
-                SourceEditMode::Byte => {
-                    egui::ScrollArea::vertical()
-                        .max_height(400.0)
-                        .auto_shrink(false)
-                        .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
-                        .show(ui, |ui| {
-                            egui::Grid::new("byte_grid")
-                                .striped(true)
-                                .num_columns(2)
+                    // TODO: Add proper modes
+                    // Source code editor
+                    match self.source_edit_mode {
+                        // TODO: Merge with instruction mode
+                        SourceEditMode::Byte => {
+                            egui::ScrollArea::vertical()
+                                .max_height(300.0)
+                                .auto_shrink(false)
+                                .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
                                 .show(ui, |ui| {
-                                    for (i, byte) in self.rom.bytes_mut().iter_mut().enumerate() {
-                                        if i == 0 {
-                                            ui.label("Address");
-                                            ui.label("Contents");
-                                            ui.end_row();
-                                        }
+                                    egui::Grid::new("byte_grid")
+                                        .striped(true)
+                                        .num_columns(2)
+                                        .show(ui, |ui| {
+                                            for (i, byte) in
+                                                self.rom.bytes_mut().iter_mut().enumerate()
+                                            {
+                                                if i == 0 {
+                                                    ui.label("Address");
+                                                    ui.label("Contents");
+                                                    ui.end_row();
+                                                }
 
-                                        let byte_index = self.numeric_display.byte_string(i as u8);
-                                        ui.label(byte_index);
+                                                let byte_index =
+                                                    self.numeric_display.byte_string(i as u8);
+                                                ui.label(byte_index);
 
-                                        let mut byte_string = if self
-                                            .active_cell_index
-                                            .is_some_and(|index| index == i)
-                                        {
-                                            self.active_cell_string.clone()
-                                        } else {
-                                            self.numeric_display.byte_string(*byte)
-                                        };
-
-                                        let response =
-                                            ui.add(egui::TextEdit::singleline(&mut byte_string));
-
-                                        if self.active_cell_index.is_some_and(|index| index == i) {
-                                            let prefix = self.numeric_display.prefix();
-
-                                            if response.changed() {
-                                                let within_length = match self.numeric_display {
-                                                    NumericDisplay::Hex => byte_string.len() < 5,
-                                                    NumericDisplay::Binary => {
-                                                        byte_string.len() < 11
-                                                    }
+                                                let mut byte_string = if self
+                                                    .active_cell_index
+                                                    .is_some_and(|index| index == i)
+                                                {
+                                                    self.active_cell_string.clone()
+                                                } else {
+                                                    self.numeric_display.byte_string(*byte)
                                                 };
 
-                                                let valid_start = byte_string.starts_with(prefix);
+                                                let response = ui.add(egui::TextEdit::singleline(
+                                                    &mut byte_string,
+                                                ));
 
-                                                let valid_data = match self.numeric_display {
-                                                    NumericDisplay::Hex => {
-                                                        self.hex_regex.is_match(&byte_string)
-                                                    }
-                                                    NumericDisplay::Binary => {
-                                                        self.binary_regex.is_match(&byte_string)
-                                                    }
-                                                };
+                                                if self
+                                                    .active_cell_index
+                                                    .is_some_and(|index| index == i)
+                                                {
+                                                    let prefix = self.numeric_display.prefix();
 
-                                                if within_length && (valid_data || valid_start) {
+                                                    if response.changed() {
+                                                        let within_length =
+                                                            match self.numeric_display {
+                                                                NumericDisplay::Hex => {
+                                                                    byte_string.len() < 5
+                                                                }
+                                                                NumericDisplay::Binary => {
+                                                                    byte_string.len() < 11
+                                                                }
+                                                            };
+
+                                                        let valid_start =
+                                                            byte_string.starts_with(prefix);
+
+                                                        let valid_data = match self.numeric_display
+                                                        {
+                                                            NumericDisplay::Hex => self
+                                                                .hex_regex
+                                                                .is_match(&byte_string),
+                                                            NumericDisplay::Binary => self
+                                                                .binary_regex
+                                                                .is_match(&byte_string),
+                                                        };
+
+                                                        if within_length
+                                                            && (valid_data || valid_start)
+                                                        {
+                                                            self.active_cell_string = byte_string;
+                                                        }
+                                                    } else if response.lost_focus() {
+                                                        *byte = u8::from_str_radix(
+                                                            byte_string.trim_start_matches(prefix),
+                                                            self.numeric_display.radix(),
+                                                        )
+                                                        .unwrap_or(0);
+                                                        self.active_cell_index = None;
+                                                    }
+                                                } else if response.gained_focus() {
+                                                    self.active_cell_index = Some(i);
                                                     self.active_cell_string = byte_string;
                                                 }
-                                            } else if response.lost_focus() {
-                                                *byte = u8::from_str_radix(
-                                                    byte_string.trim_start_matches(prefix),
-                                                    self.numeric_display.radix(),
-                                                )
-                                                .unwrap_or(0);
-                                                self.active_cell_index = None;
+
+                                                ui.end_row();
                                             }
-                                        } else if response.gained_focus() {
-                                            self.active_cell_index = Some(i);
-                                            self.active_cell_string = byte_string;
-                                        }
-
-                                        ui.end_row();
-                                    }
+                                        });
                                 });
-                        });
-                }
-                SourceEditMode::Instruction => {
-                    egui::ScrollArea::vertical()
-                        .max_height(400.0)
-                        .auto_shrink(false)
-                        .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
-                        .show(ui, |ui| {
-                            egui::Grid::new("instruction_grid")
-                                .striped(true)
-                                .num_columns(2)
+                        }
+                        SourceEditMode::Instruction => {
+                            egui::ScrollArea::vertical()
+                                .max_height(300.0)
+                                .auto_shrink(false)
+                                .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
                                 .show(ui, |ui| {
-                                    for (i, chunk) in self.rom.bytes_mut().chunks_mut(2).enumerate()
-                                    {
-                                        if i == 0 {
-                                            ui.label("Address");
-                                            ui.label("Contents");
-                                            ui.end_row();
-                                        }
-                                        let start_byte =
-                                            self.numeric_display.byte_string((i * 2) as u8);
-                                        let end_byte =
-                                            self.numeric_display.byte_string((i * 2 + 1) as u8);
+                                    egui::Grid::new("instruction_grid")
+                                        .striped(true)
+                                        .num_columns(2)
+                                        .show(ui, |ui| {
+                                            for (i, chunk) in
+                                                self.rom.bytes_mut().chunks_mut(2).enumerate()
+                                            {
+                                                if i == 0 {
+                                                    ui.label("Address");
+                                                    ui.label("Contents");
+                                                    ui.end_row();
+                                                }
+                                                let start_byte =
+                                                    self.numeric_display.byte_string((i * 2) as u8);
+                                                let end_byte = self
+                                                    .numeric_display
+                                                    .byte_string((i * 2 + 1) as u8);
 
-                                        ui.label(format!("{}-{}", start_byte, end_byte));
+                                                ui.label(format!("{}-{}", start_byte, end_byte));
 
-                                        let mut byte_string = if self
-                                            .active_cell_index
-                                            .is_some_and(|index| index == i)
-                                        {
-                                            self.active_cell_string.clone()
-                                        } else {
-                                            self.numeric_display.instruction_string(
-                                                ((chunk[0] as u16) << 8) | chunk[1] as u16,
-                                            )
-                                        };
-
-                                        let response =
-                                            ui.add(egui::TextEdit::singleline(&mut byte_string));
-
-                                        if self.active_cell_index.is_some_and(|index| index == i) {
-                                            let prefix = self.numeric_display.prefix();
-
-                                            if response.changed() {
-                                                let within_length = match self.numeric_display {
-                                                    NumericDisplay::Hex => byte_string.len() < 7,
-                                                    NumericDisplay::Binary => {
-                                                        byte_string.len() < 21
-                                                    }
+                                                let mut byte_string = if self
+                                                    .active_cell_index
+                                                    .is_some_and(|index| index == i)
+                                                {
+                                                    self.active_cell_string.clone()
+                                                } else {
+                                                    self.numeric_display.instruction_string(
+                                                        ((chunk[0] as u16) << 8) | chunk[1] as u16,
+                                                    )
                                                 };
 
-                                                let valid_start = byte_string.starts_with(prefix);
+                                                let response = ui.add(egui::TextEdit::singleline(
+                                                    &mut byte_string,
+                                                ));
 
-                                                let valid_data = match self.numeric_display {
-                                                    NumericDisplay::Hex => {
-                                                        self.hex_regex.is_match(&byte_string)
-                                                    }
-                                                    NumericDisplay::Binary => {
-                                                        self.binary_regex.is_match(&byte_string)
-                                                    }
-                                                };
+                                                if self
+                                                    .active_cell_index
+                                                    .is_some_and(|index| index == i)
+                                                {
+                                                    let prefix = self.numeric_display.prefix();
 
-                                                if within_length && (valid_data || valid_start) {
+                                                    if response.changed() {
+                                                        let within_length =
+                                                            match self.numeric_display {
+                                                                NumericDisplay::Hex => {
+                                                                    byte_string.len() < 7
+                                                                }
+                                                                NumericDisplay::Binary => {
+                                                                    byte_string.len() < 21
+                                                                }
+                                                            };
+
+                                                        let valid_start =
+                                                            byte_string.starts_with(prefix);
+
+                                                        let valid_data = match self.numeric_display
+                                                        {
+                                                            NumericDisplay::Hex => self
+                                                                .hex_regex
+                                                                .is_match(&byte_string),
+                                                            NumericDisplay::Binary => self
+                                                                .binary_regex
+                                                                .is_match(&byte_string),
+                                                        };
+
+                                                        if within_length
+                                                            && (valid_data || valid_start)
+                                                        {
+                                                            self.active_cell_string = byte_string;
+                                                        }
+                                                    } else if response.lost_focus() {
+                                                        let radix = self.numeric_display.radix();
+
+                                                        let opcode = byte_string
+                                                            .strip_prefix("0x")
+                                                            .unwrap_or_default();
+
+                                                        if let Some((lhs, rhs)) =
+                                                            opcode.split_at_checked(2)
+                                                        {
+                                                            chunk[0] =
+                                                                u8::from_str_radix(lhs, radix)
+                                                                    .unwrap_or(0);
+
+                                                            chunk[1] =
+                                                                u8::from_str_radix(rhs, radix)
+                                                                    .unwrap_or(0);
+                                                        }
+
+                                                        self.active_cell_index = None;
+                                                        //println!("0 {:#X}, 1 {:#X}", chunk[0], chunk[1]);
+                                                    }
+                                                } else if response.gained_focus() {
+                                                    self.active_cell_index = Some(i);
                                                     self.active_cell_string = byte_string;
                                                 }
-                                            } else if response.lost_focus() {
-                                                let radix = self.numeric_display.radix();
 
-                                                let opcode = byte_string
-                                                    .strip_prefix("0x")
-                                                    .unwrap_or_default();
-
-                                                let (lhs, rhs) = opcode.split_at(2);
-
-                                                chunk[0] =
-                                                    u8::from_str_radix(lhs, radix).unwrap_or(0);
-
-                                                chunk[1] =
-                                                    u8::from_str_radix(rhs, radix).unwrap_or(0);
-
-                                                self.active_cell_index = None;
-                                                //println!("0 {:#X}, 1 {:#X}", chunk[0], chunk[1]);
+                                                ui.end_row();
                                             }
-                                        } else if response.gained_focus() {
-                                            self.active_cell_index = Some(i);
-                                            self.active_cell_string = byte_string;
-                                        }
-
-                                        ui.end_row();
-                                    }
+                                        });
                                 });
-                        });
-                }
-                SourceEditMode::Assembly => {
-                    #[cfg(debug_assertions)]
-                    {
-                        egui::ScrollArea::both().max_height(400.0).show(ui, |ui| {
-                            CodeEditor::default()
-                                .id_source("code editor")
-                                .with_rows(12)
-                                .with_fontsize(12.0)
-                                .with_theme(ColorTheme::AYU_DARK)
-                                .with_syntax(Syntax::vole())
-                                .with_numlines(true)
-                                .show(ui, &mut self.source_code);
-                        });
+                        }
+                        SourceEditMode::Assembly => {
+                            #[cfg(debug_assertions)]
+                            {
+                                egui::ScrollArea::both().max_height(400.0).show(ui, |ui| {
+                                    CodeEditor::default()
+                                        .id_source("code editor")
+                                        .with_rows(12)
+                                        .with_fontsize(12.0)
+                                        .with_theme(ColorTheme::AYU_DARK)
+                                        .with_syntax(Syntax::vole())
+                                        .with_numlines(true)
+                                        .show(ui, &mut self.source_code);
+                                });
 
-                        if ui.button("Compile").clicked() {
-                            // TODO: Compile source code into bytes
+                                if ui.button("Compile").clicked() {
+                                    // TODO: Compile source code into bytes
+                                }
+                            }
+
+                            #[cfg(not(debug_assertions))]
+                            ui.label("Under Construction");
                         }
                     }
+                    ui.separator();
 
-                    #[cfg(not(debug_assertions))]
-                    ui.label("Under Construction");
-                }
-            }
-            ui.separator();
+                    if ui.button("Export").clicked() {
+                        self.show_export = true;
+                    }
 
-            if ui.button("Export").clicked() {
-                self.show_export = true;
-            }
+                    ui.separator();
 
-            ui.separator();
+                    ui.heading("Execution");
 
-            ui.heading("Execution");
+                    ui.add(
+                        egui::Slider::new(&mut self.execution_speed, 1..=10)
+                            .text("Execution Speed"),
+                    )
+                    .on_hover_text("The number of seconds it takes to execute one cycle.");
 
-            ui.add(egui::Slider::new(&mut self.execution_speed, 1..=10).text("Execution Speed"))
-                .on_hover_text("The number of seconds it takes to execute one cycle.");
+                    #[cfg(debug_assertions)]
+                    {
+                        let mut text = "0x00";
+                        let label = ui.label("Program Counter Start");
+                        ui.text_edit_singleline(&mut text).labelled_by(label.id);
+                    }
 
-            #[cfg(debug_assertions)]
-            {
-                let mut text = "0x00";
-                let label = ui.label("Program Counter Start");
-                ui.text_edit_singleline(&mut text).labelled_by(label.id);
-            }
+                    ui.separator();
 
-            ui.separator();
+                    // TODO Add grid to fill horizontal space
+                    ui.horizontal(|ui| {
+                        if ui
+                            .button("Run at full speed")
+                            .on_hover_text("The CPU cycles around 60 times per second.")
+                            .clicked()
+                        {
+                            self.vole.load_rom(self.rom.bytes());
+                            self.vole.start(StartMode::Reset);
+                            self.cycle_speed = 0;
+                            self.cycle_timer = 0.0;
+                        }
 
-            // TODO Add grid to fill horizontal space
-            ui.horizontal(|ui| {
-                if ui
-                    .button("Run at full speed")
-                    .on_hover_text("The CPU cycles around 60 times per second.")
-                    .clicked()
-                {
-                    self.vole.load_rom(self.rom.bytes());
-                    self.vole.start(StartMode::Reset);
-                    self.cycle_speed = 0;
-                    self.cycle_timer = 0.0;
-                }
+                        if ui
+                            .button("Run at execution speed")
+                            .on_hover_text("Executes the program at the execution speed.")
+                            .clicked()
+                        {
+                            self.vole.load_rom(self.rom.bytes());
+                            self.vole.start(StartMode::Reset);
+                            self.cycle_speed = self.execution_speed.max(1);
+                            self.cycle_timer = self.execution_speed as f32;
+                        }
 
-                if ui
-                    .button("Run at execution speed")
-                    .on_hover_text("Executes the program at the execution speed.")
-                    .clicked()
-                {
-                    self.vole.load_rom(self.rom.bytes());
-                    self.vole.start(StartMode::Reset);
-                    self.cycle_speed = self.execution_speed.max(1);
-                    self.cycle_timer = self.execution_speed as f32;
-                }
-
-                #[cfg(debug_assertions)]
-                if ui
-                    .button("Run in steps")
-                    .on_hover_text("Each cycle needs to be manually advanced.")
-                    .clicked()
-                {
-                    // TODO: Pause after each step of the cycle
-                    self.vole.load_rom(self.rom.bytes());
-                    self.vole.start(StartMode::Reset);
-                }
-            });
+                        #[cfg(debug_assertions)]
+                        if ui
+                            .button("Run in steps")
+                            .on_hover_text("Each cycle needs to be manually advanced.")
+                            .clicked()
+                        {
+                            // TODO: Pause after each step of the cycle
+                            self.vole.load_rom(self.rom.bytes());
+                            self.vole.start(StartMode::Reset);
+                        }
+                    });
+                });
         });
 
         /*
@@ -534,7 +562,49 @@ impl eframe::App for VoleUI {
            Visualizer panel
         */
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.label("Under Construction");
+            ui.group(|ui| {
+                ui.heading("Registers");
+                egui::Grid::new("registers")
+                    .num_columns(4)
+                    //.max_col_width(10.0)
+                    .spacing(Vec2::new(10.0, 3.0))
+                    .min_col_width(4.0)
+                    .show(ui, |ui| {
+                        for (i, chunks) in self.vole.registers().chunks(4).enumerate() {
+                            for (r, chunk) in chunks.iter().enumerate() {
+                                ui.group(|ui| {
+                                    let register_text = format!(
+                                        "{}",
+                                        self.numeric_display.bit_string((r + (i * 4)) as u8)
+                                    );
+                                    let label = ui.label(register_text.clone());
+
+                                    let mut register = *chunk;
+
+                                    if self.numeric_display == NumericDisplay::Binary {
+                                        ui.add(
+                                            egui::DragValue::new(&mut register)
+                                                .binary(8, false)
+                                                .prefix("0b"),
+                                        )
+                                        //.on_hover_text(register_text)
+                                        .labelled_by(label.id);
+                                    } else {
+                                        ui.add(
+                                            egui::DragValue::new(&mut register)
+                                                .hexadecimal(2, false, true)
+                                                .prefix("0x"),
+                                        )
+                                        //.on_hover_text(register_text)
+                                        .labelled_by(label.id);
+                                    }
+                                });
+                            }
+
+                            ui.end_row();
+                        }
+                    });
+            });
         });
     }
 }

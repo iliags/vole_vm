@@ -54,6 +54,16 @@ impl NumericDisplay {
     }
 
     /// Converts the given byte into a binary or hex string
+    pub fn bit_string(&self, byte: u8) -> String {
+        match self {
+            NumericDisplay::Hex => format!("0x{:01X}", byte),
+            // Note: Rust counts the "0b" as part of the display length, hence the "010b",
+            //  use "08b" if the prefix isn't visible.
+            NumericDisplay::Binary => format!("{:#06b}", byte),
+        }
+    }
+
+    /// Converts the given byte into a binary or hex string
     pub fn byte_string(&self, byte: u8) -> String {
         match self {
             NumericDisplay::Hex => format!("0x{:02X}", byte),

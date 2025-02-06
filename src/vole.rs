@@ -93,6 +93,10 @@ impl Vole {
         self.registers = vec![0; 16];
     }
 
+    pub fn registers(&self) -> &[u8] {
+        &self.registers
+    }
+
     /// Perform a fetch-decode-execute cycle
     pub fn cycle(&mut self) {
         /*
