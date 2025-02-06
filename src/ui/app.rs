@@ -190,7 +190,7 @@ impl eframe::App for VoleUI {
 
             if ui.button("Load Demo").clicked() {
                 let rom: Vec<u8> = vec![0; 256];
-                self.rom.bytes_mut().copy_from_slice(&&rom);
+                self.rom.bytes_mut().copy_from_slice(&rom);
                 self.rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
             }
 
