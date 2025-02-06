@@ -5,29 +5,6 @@ use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 use regex::Regex;
 use strum::IntoEnumIterator;
 
-/*
-const DEMO_SOURCE: &str = "; Load 0x00 into r0
-0x20, 0x00,
-
-; Load 0xFF into r5
-0x25, 0xFF,
-
-; Load mem 0x44 into r4
-0x14, 0x44,
-
-; If r4 == r0, jump to mem 0x0A (skip next line)
-0xB4, 0x0A,
-
-; Load 0x01 into r5
-0x25, 0x01,
-
-; Store r5 into mem 0x46
-0x35, 0x46,
-
-;Quit
-0xC0, 0x00,";
- */
-
 const DEMO_SOURCE: &str = "ld r0, 0x00        ; Load 0x00 into r0
 ld r5, 0xFF        ; Load 0xFF into r5
 ld r4, (0x44)      ; Load mem 0x44 into r4
