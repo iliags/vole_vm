@@ -54,7 +54,6 @@ impl NumericDisplay {
     }
 
     /// Converts the given byte into a binary or hex string
-    //#[inline]
     pub fn byte_string(&self, byte: u8) -> String {
         match self {
             NumericDisplay::Hex => format!("0x{:02X}", byte),
@@ -75,7 +74,6 @@ impl NumericDisplay {
     /// Returns the radix for the current numeric display.
     ///
     /// Used for converting string numerics into types
-    //#[inline]
     pub fn radix(&self) -> u32 {
         match self {
             NumericDisplay::Hex => 16,
