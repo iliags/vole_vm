@@ -422,7 +422,7 @@ impl eframe::App for VoleUI {
             ui.heading("Execution");
 
             ui.add(egui::Slider::new(&mut self.execution_speed, 1..=10).text("Execution Speed"))
-                .on_hover_text("The number of cycles to execute per second.");
+                .on_hover_text("The number of seconds it takes to execute one cycle.");
 
             #[cfg(debug_assertions)]
             {
@@ -525,21 +525,8 @@ impl eframe::App for VoleUI {
            Visualizer panel
         */
         egui::CentralPanel::default().show(ctx, |ui| {
-            /*
-            // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("Vole Virtual Machine");
-
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
-            });
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |_ui| {
-                //egui::warn_if_debug_build(ui);
-            });
-             */
-
-            Frame::canvas(ui.style()).show(ui, |ui| {
+            Frame::canvas(ui.style()).show(ui, |_ui| {
+                /*
                 let color = if ui.visuals().dark_mode {
                     Color32::from_additive_luminance(196)
                 } else {
@@ -559,7 +546,7 @@ impl eframe::App for VoleUI {
 
                 let mut shapes = vec![];
 
-                for &mode in &[2, 3, 5] {
+                 for &mode in &[2, 3, 5] {
                     let mode = mode as f64;
                     let n = 120;
                     let speed = 1.5;
@@ -595,6 +582,7 @@ impl eframe::App for VoleUI {
                 }
 
                 ui.painter().extend(shapes);
+                */
             });
         });
     }
