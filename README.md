@@ -38,6 +38,9 @@ The specification has the machine implement aspects of knowledge which is covere
 
 Although not part of the specification, there are so few operations that a simple assembly language is implemented. It's based on the Z80 assembly language since it's one of the more widely known variants that is being used in the homebrew scene.
 
+> [!IMPORTANT]
+> Hexadecimal numbers must be prefixed with `0x` and binary with `0b`.
+
 - `ld dest, src` - Load a value from src into dest.
   - Combines the LOAD, STORE, and MOV op-codes.
   - `src` can be a register, memory address, or value
@@ -50,8 +53,6 @@ Although not part of the specification, there are so few operations that a simpl
 - `rot r,x` - Rotate the bit pattern in register `r` one bit to the right `x` times. Each time, placing the bit that started at the low order end at the high-order end.
 - `jp r,label` - Jump to the label if register `r` is equal to `r0`
 - `halt` - Stop program execution
-
-Hexadecimal numbers must be prefixed with `0x` and binary with `0b`.
 
 ### Registers
 
