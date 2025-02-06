@@ -47,6 +47,7 @@ const HEX_STR: &str = "^(0x|0X)?[a-fA-F0-9]+$";
 const BINARY_STR: &str = "\\b(0b)?[01]+\\b";
 
 // TODO: Separate execution options from UI
+// TODO: Add a container for marking elements to be highlighted or animated with a timer component
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -156,7 +157,7 @@ impl eframe::App for VoleUI {
             //let limit = self.cycle_speed * 1000;
 
             if self.cycle_timer >= self.cycle_speed as f32 {
-                println!("Cycle");
+                //println!("Cycle");
                 self.cycle_timer = 0.0;
                 self.vole.cycle();
             }
@@ -562,9 +563,12 @@ impl eframe::App for VoleUI {
            Visualizer panel
         */
         egui::CentralPanel::default().show(ctx, |ui| {
+            /*
+                Registers
+            */
             ui.group(|ui| {
                 ui.heading("Registers");
-                egui::Grid::new("registers")
+                egui::Grid::new("registers_grid")
                     .num_columns(4)
                     //.max_col_width(10.0)
                     .spacing(Vec2::new(10.0, 3.0))
@@ -602,6 +606,78 @@ impl eframe::App for VoleUI {
                             ui.end_row();
                         }
                     });
+            });
+
+            /*
+               State
+            */
+            ui.group(|ui| {
+                ui.heading("State");
+                ui.horizontal(|ui| {
+                    let pc_text = format!(
+                        "Program Counter: {}",
+                        self.numeric_display
+                            .byte_string(self.vole.program_counter())
+                    );
+                    ui.label(pc_text);
+                });
+                ui.horizontal(|ui| {
+                    let ir_text = format!(
+                        "Index Register: {}",
+                        self.numeric_display
+                            .instruction_string(self.vole.instruction_register())
+                    );
+                    ui.label(ir_text);
+                });
+            });
+
+            /*
+                Memory
+            */
+            ui.group(|ui| {
+                ui.heading("Memory");
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    egui::Grid::new("memory_grid")
+                        .num_columns(4)
+                        //.max_col_width(10.0)
+                        .spacing(Vec2::new(10.0, 3.0))
+                        .min_col_width(4.0)
+                        .show(ui, |ui| {
+                            let chunk_size = 8;
+                            for (i, chunks) in self.vole.memory().chunks(chunk_size).enumerate() {
+                                for (r, chunk) in chunks.iter().enumerate() {
+                                    ui.group(|ui| {
+                                        let memory_text = self
+                                            .numeric_display
+                                            .byte_string((r + (i * chunk_size)) as u8);
+                                        let label = ui.label(memory_text.clone());
+
+                                        let mut memory = *chunk;
+
+                                        if self.numeric_display == NumericDisplay::Binary {
+                                            ui.add(
+                                                egui::DragValue::new(&mut memory)
+                                                    .binary(8, false)
+                                                    .prefix("0b"),
+                                            )
+                                            //.on_hover_text(register_text)
+                                            .labelled_by(label.id);
+                                        } else {
+                                            ui.add(
+                                                egui::DragValue::new(&mut memory)
+                                                    .hexadecimal(2, false, true)
+                                                    .prefix("0x"),
+                                            )
+                                            //.on_hover_text(register_text)
+                                            .labelled_by(label.id);
+                                        }
+                                    });
+                                }
+
+                                ui.end_row();
+                            }
+                        });
+                });
             });
         });
     }

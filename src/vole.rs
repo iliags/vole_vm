@@ -3,7 +3,7 @@ pub struct Vole {
     registers: Vec<u8>,
 
     // Program Counter
-    pc: u16,
+    pc: u8,
 
     // Index register
     ir: u16,
@@ -59,7 +59,7 @@ impl Vole {
     }
 
     /// Set the program counter to this address when starting the program
-    pub fn set_start_address(&mut self, address: u16) {
+    pub fn set_start_address(&mut self, address: u8) {
         self.pc = address;
     }
 
@@ -86,6 +86,11 @@ impl Vole {
         self.memory[address as usize]
     }
 
+    /// Get the memory
+    pub fn memory(&self) -> &[u8] {
+        &self.memory
+    }
+
     /// Reset the state of the CPU
     pub fn reset_cpu(&mut self) {
         self.ir = 0;
@@ -95,6 +100,16 @@ impl Vole {
 
     pub fn registers(&self) -> &[u8] {
         &self.registers
+    }
+
+    /// Returns the program counter
+    pub fn program_counter(&self) -> u8 {
+        self.pc
+    }
+
+    /// Returns the instruction register
+    pub fn instruction_register(&self) -> u16 {
+        self.ir
     }
 
     /// Perform a fetch-decode-execute cycle
@@ -116,7 +131,7 @@ impl Vole {
         let r = ((self.ir & 0x0F00) >> 8) as u8;
         let s = ((self.ir & 0x00F0) >> 4) as u8;
         let t = (self.ir & 0x000F) as u8;
-        let xy_index = (self.ir & 0x00FF) as u8;
+        let xy = (self.ir & 0x00FF) as u8;
 
         /*
            Execute
@@ -124,16 +139,16 @@ impl Vole {
         match self.ir & 0xF000 {
             0x1000 => {
                 // Load register R with memory XY
-                self.registers[r as usize] = self.memory[xy_index as usize];
+                self.registers[r as usize] = self.memory[xy as usize];
             }
             0x2000 => {
                 // Load register R with XY
                 // Reinterprets XY as an i8 since it's directly loaded into a register
-                self.registers[r as usize] = xy_index;
+                self.registers[r as usize] = xy;
             }
             0x3000 => {
                 // Store register R into memory XY
-                self.memory[xy_index as usize] = self.registers[r as usize];
+                self.memory[xy as usize] = self.registers[r as usize];
             }
             0x4000 => {
                 // Move register S into register R
@@ -175,7 +190,7 @@ impl Vole {
             0xB000 => {
                 // Jump to the instruction at memory XY if register R equals register 0
                 if self.registers[r as usize] == self.registers[0] {
-                    self.pc = xy_index as u16;
+                    self.pc = xy;
                 }
             }
             0xC000 => {
