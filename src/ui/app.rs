@@ -1,3 +1,5 @@
+use super::{rom::Rom, NumericDisplay, SourceEditMode};
+use crate::vole::Vole;
 use egui::{
     containers::Frame, emath, epaint, epaint::PathStroke, hex_color, lerp, pos2, remap,
     scroll_area::ScrollBarVisibility, vec2, Color32, Pos2, Rect,
@@ -5,10 +7,6 @@ use egui::{
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 use regex::Regex;
 use strum::IntoEnumIterator;
-
-use crate::vole::Vole;
-
-use super::{rom::Rom, NumericDisplay, SourceEditMode};
 
 /*
 const DEMO_SOURCE: &str = "; Load 0x00 into r0
