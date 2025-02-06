@@ -493,8 +493,11 @@ impl eframe::App for VoleUI {
                             self.cycle_speed = self.execution_speed.max(1);
                             self.cycle_timer = self.execution_speed as f32;
                         }
+                    });
 
-                        #[cfg(debug_assertions)]
+                    #[cfg(debug_assertions)]
+                    {
+                        ui.separator();
                         if ui
                             .button("Run in steps")
                             .on_hover_text("Each cycle needs to be manually advanced.")
@@ -504,7 +507,7 @@ impl eframe::App for VoleUI {
                             self.vole.load_rom(self.rom.bytes());
                             self.vole.start(StartMode::Reset);
                         }
-                    });
+                    }
                 });
         });
 
@@ -584,6 +587,12 @@ impl eframe::App for VoleUI {
                     );
                     ui.label(ir_text);
                 });
+
+                let cycle_text = format!(
+                    "Next Cycle Time: {:.1} / {}",
+                    self.cycle_timer, self.cycle_speed
+                );
+                ui.label(cycle_text);
             });
 
             /*
