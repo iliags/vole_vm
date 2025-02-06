@@ -34,6 +34,61 @@ in Section 1.7 and summarized in Figure 1.24.
 
 The specification has the machine implement aspects of knowledge which is covered in the book, however it doesn't specify concrete types for the memory and registers. Based solely on the specification, signed 8-bit integers would be the ideal type for registers and memory values, however this doesn't work in practice. The floating point operation could be implemented manually, however storing the result into the register would likely cause information loss or an incorrect result when being read back.
 
+## Assembler (WIP)
+
+Although not part of the specification, there are so few operations that a simple assembly language is implemented. It's based on the Z80 assembly language since it's one of the more widely known variants that is being used in the homebrew scene.
+
+- `ld dest, src` - Load a value from src into dest.
+  - Combines the LOAD, STORE, and MOV op-codes.
+  - `src` can be a register, memory address, or value
+  - `dest` can be a register or memory address
+- `adds r, s, t` - Adds registers `s` and `t` as two's compliment, stores the result in register `r`.
+- `addf r,s,t` - Adds registers `s` and `t` as floating point, stores the result in register `r`.
+- `or r,s,t` - OR the bit patterns in `s` and `t`, stores the result in register `r`.
+- `and r,s,t` - AND the bit patterns in `s` and `t`, stores the result in register `r`.
+- `xor r,s,t` - XOR the bit patterns in `s` and `t`, stores the result in register `r`.
+- `rot r,x` - Rotate the bit pattern in register `r` one bit to the right `x` times. Each time, place the bit that started at the low order end at the high-order end.
+- `jp r,label` - Jump to the label if register `r` is equal to `r0`
+- `halt` - Stop program execution
+
+Hexadecimal numbers must be prefixed with `0x` and binary with `0b`.
+
+### Registers
+
+Registers are labeled as follows:
+
+- `r0`
+- `r1`
+- `r2`
+- `r3`
+- `r4`
+- `r5`
+- `r6`
+- `r7`
+- `r8`
+- `r9`
+- `ra`
+- `rb`
+- `rc`
+- `rd`
+- `re`
+- `rf`
+
+There is no support for combining two registers for 16-bit values.
+
+### Memory Access
+
+Memory is accessed by placing the address number in parentheses.
+
+Example:
+
+```asm
+; The following lines are equivalent, load address 254 into register 0
+ld r0,(0xFE)
+ld r0,(254)
+ld r0,(0b11111110)
+```
+
 ## Attribution
 
 Mouse icon by [ikoiku](https://ikoiku.itch.io/16-x-16-pixel-art-character-mouse), licensed under [Creative Commons Attribution-NoDerivatives 4.0](http://creativecommons.org/licenses/by-nd/4.0/).

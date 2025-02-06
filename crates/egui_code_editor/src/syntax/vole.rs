@@ -12,7 +12,8 @@ impl Syntax {
             keywords: BTreeSet::from([
                 "ld",   // LOAD, registers have letters, memory locations use parentheses
                 "mv",   // MOVE
-                "add",  // ADD
+                "adds", // ADD two's compliment
+                "addf", // ADD float
                 "or",   // OR
                 "and",  // AND
                 "xor",  // XOR
@@ -23,22 +24,22 @@ impl Syntax {
             types: BTreeSet::from([]),
             special: BTreeSet::from([
                 //8-bit registers
-                "r0",  // 0x0
-                "r1",  // 0x1
-                "r2",  // 0x2
-                "r3",  // 0x3
-                "r4",  // 0x4
-                "r5",  // 0x5
-                "r6",  // 0x6
-                "r7",  // 0x7
-                "r8",  // 0x8
-                "r9",  // 0x9
-                "r10", // 0xA
-                "r11", // 0xB
-                "r12", // 0xC
-                "r13", // 0xD
-                "r14", // 0xE
-                "r15", // 0xF
+                "r0", // 0x0
+                "r1", // 0x1
+                "r2", // 0x2
+                "r3", // 0x3
+                "r4", // 0x4
+                "r5", // 0x5
+                "r6", // 0x6
+                "r7", // 0x7
+                "r8", // 0x8
+                "r9", // 0x9
+                "ra", // 0xA
+                "rb", // 0xB
+                "rc", // 0xC
+                "rd", // 0xD
+                "re", // 0xE
+                "rf", // 0xF
             ]),
         }
     }
