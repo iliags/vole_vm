@@ -49,7 +49,6 @@ const DEMO_ROM: &[u8] = &[
 const HEX_STR: &str = "^(0x|0X)?[a-fA-F0-9]+$";
 const BINARY_STR: &str = "\\b(0b)?[01]+\\b";
 
-// TODO: Separate execution options from UI
 // TODO: Add a container for marking elements to be highlighted or animated with a timer component
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
