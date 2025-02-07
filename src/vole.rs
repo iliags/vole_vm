@@ -69,11 +69,6 @@ impl Vole {
         }
     }
 
-    /// Set the program counter to this address when starting the program
-    pub fn set_start_address(&mut self, address: u8) {
-        self.pc = address;
-    }
-
     /// Start the machine
     pub fn start(&mut self, start_mode: StartMode) {
         if start_mode == StartMode::Reset {
@@ -114,9 +109,24 @@ impl Vole {
         &self.registers
     }
 
+    /// Get the registers mutable
+    pub fn registers_mut(&mut self) -> &mut [u8] {
+        &mut self.registers
+    }
+
+    /// Set a register value
+    pub fn set_register_value(&mut self, register: u8, value: u8) {
+        self.registers[register as usize] = value;
+    }
+
     /// Returns the program counter
     pub fn program_counter(&self) -> u8 {
         self.pc
+    }
+
+    /// Set the program counter to an address
+    pub fn set_program_counter(&mut self, address: u8) {
+        self.pc = address;
     }
 
     /// Returns the instruction register
@@ -226,34 +236,88 @@ mod tests {
     use super::*;
     use rand::{self, Rng};
 
+    // Helper function
+    fn generate_random_rom(length: usize) -> Vec<u8> {
+        assert!(length > 0);
+
+        let mut rng = rand::rng();
+        let mut rom = Vec::new();
+        for _ in 0..length {
+            rom.push(rng.random::<u8>());
+        }
+
+        rom
+    }
+
     #[test]
     fn load_rom() {
-        // Randomly generate a rom
-        let mut rng = rand::rng();
-        let rom_length = rng.random::<u8>() as usize;
-
-        let mut rom = vec![0; rom_length];
-        for byte in rom.iter_mut() {
-            *byte = rng.random::<u8>();
-        }
+        let rom_length = rand::random::<u8>().max(1) as usize;
+        let rom = generate_random_rom(rom_length);
 
         // Load the rom into the device
         let mut device = Vole::new();
         device.load_rom(&rom);
 
+        assert!(rom_length > 0);
         assert_eq!(rom, device.memory()[0..rom_length]);
     }
 
     #[test]
-    #[ignore]
     fn load_rom_offset() {
-        todo!();
+        let mut rng = rand::rng();
+
+        // Select a random start offset (exclusive)
+        let start_offset = rng.random_range(0..255) as usize;
+
+        // Randomly generate a rom
+        let rom_length = rng.random_range(0..=(255 - start_offset)).max(1);
+        let rom = generate_random_rom(rom_length);
+
+        // Load the rom into the device
+        let mut device = Vole::new();
+        device.load_rom_offset(&rom, start_offset);
+
+        assert!(rom_length > 0);
+        assert_eq!(
+            rom,
+            device.memory()[start_offset..(start_offset + rom_length)]
+        );
     }
 
     #[test]
-    #[ignore]
     fn device_start() {
-        todo!();
+        let mut rng = rand::rng();
+
+        // Randomly generate a rom
+        let rom_length = rand::random::<u8>().max(1) as usize;
+        let rom = generate_random_rom(rom_length);
+
+        let mut device = Vole::new();
+        device.load_rom(&rom);
+
+        // Set random data on the device
+        let random_pc = rng.random::<u8>().max(1);
+        device.set_program_counter(random_pc);
+
+        let mut random_registers = Vec::new();
+        for r in device.registers_mut().iter_mut() {
+            let val = rng.random::<u8>();
+            *r = val;
+            random_registers.push(val);
+        }
+        let random_registers = random_registers;
+
+        device.start(StartMode::KeepState);
+        assert!(rom_length > 0);
+        assert_eq!(rom, device.memory()[0..rom_length]);
+        assert_eq!(device.registers(), random_registers);
+        assert_eq!(device.program_counter(), random_pc);
+
+        device.start(StartMode::Reset);
+        assert!(rom_length > 0);
+        assert_eq!(rom, device.memory()[0..rom_length]);
+        assert_ne!(device.registers(), random_registers);
+        assert_ne!(device.program_counter(), random_pc);
     }
 
     #[test]
