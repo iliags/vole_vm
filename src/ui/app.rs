@@ -95,6 +95,9 @@ pub struct VoleUI {
 
     #[serde(skip)]
     cycle_speed: usize,
+
+    #[serde(skip)]
+    step_cycle: Option<bool>,
 }
 
 impl Default for VoleUI {
@@ -119,6 +122,7 @@ impl Default for VoleUI {
             show_export: false,
             cycle_timer: 0.0,
             cycle_speed: 0,
+            step_cycle: None,
         }
     }
 }
@@ -150,16 +154,26 @@ impl eframe::App for VoleUI {
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // TODO: Add cycle speed
         if self.vole.running() {
-            // TODO: Use actual delta time
-            self.cycle_timer += 1.0 / 60.0;
-            //let limit = self.cycle_speed * 1000;
+            match self.step_cycle {
+                Some(step) => {
+                    if step {
+                        //println!("Step");
+                        self.vole.cycle();
+                        self.step_cycle = Some(false);
+                    }
+                }
+                None => {
+                    // TODO: Use actual delta time
+                    self.cycle_timer += 1.0 / 60.0;
+                    //let limit = self.cycle_speed * 1000;
 
-            if self.cycle_timer >= self.cycle_speed as f32 {
-                //println!("Cycle");
-                self.cycle_timer = 0.0;
-                self.vole.cycle();
+                    if self.cycle_timer >= self.cycle_speed as f32 {
+                        //println!("Cycle");
+                        self.cycle_timer = 0.0;
+                        self.vole.cycle();
+                    }
+                }
             }
 
             // TODO: Spin up background thread instead of relying on egui update
@@ -465,12 +479,14 @@ impl eframe::App for VoleUI {
                     {
                         let mut text = "0x00";
                         let label = ui.label("Program Counter Start");
-                        ui.text_edit_singleline(&mut text).labelled_by(label.id);
+                        ui.text_edit_singleline(&mut text)
+                            .labelled_by(label.id)
+                            .on_hover_text("Under Construction");
                     }
 
                     ui.separator();
 
-                    // TODO Add grid to fill horizontal space
+                    // TODO Disable irrelevant buttons while running
                     ui.horizontal(|ui| {
                         if ui
                             .button("Run at full speed")
@@ -481,6 +497,7 @@ impl eframe::App for VoleUI {
                             self.vole.start(StartMode::Reset);
                             self.cycle_speed = 0;
                             self.cycle_timer = 0.0;
+                            self.step_cycle = None;
                         }
 
                         if ui
@@ -492,6 +509,7 @@ impl eframe::App for VoleUI {
                             self.vole.start(StartMode::Reset);
                             self.cycle_speed = self.execution_speed.max(1);
                             self.cycle_timer = self.execution_speed as f32;
+                            self.step_cycle = None;
                         }
                     });
 
@@ -506,6 +524,15 @@ impl eframe::App for VoleUI {
                             // TODO: Pause after each step of the cycle
                             self.vole.load_rom(self.rom.bytes());
                             self.vole.start(StartMode::Reset);
+                            self.step_cycle = Some(false);
+                        }
+
+                        if ui
+                            .button("Next Cycle")
+                            .on_hover_text("Execute Next Cycle")
+                            .clicked()
+                        {
+                            self.step_cycle = Some(true);
                         }
                     }
                 });
@@ -547,15 +574,15 @@ impl eframe::App for VoleUI {
                             };
                             output.push_str(&row_string);
                         }
-                        output
+                        &output.to_owned()
                     }
-                    SourceEditMode::Assembly => self.source_code.clone(),
+                    SourceEditMode::Assembly => &self.source_code,
                 };
 
                 // TODO: Output types
                 ui.label("Under construction");
                 if ui.button("Copy to Clipboard").clicked() {
-                    ctx.copy_text(output_string.clone());
+                    ctx.copy_text(output_string.to_string());
                 }
                 ui.separator();
 
@@ -609,9 +636,9 @@ impl eframe::App for VoleUI {
                         for (i, chunks) in self.vole.registers().chunks(4).enumerate() {
                             for (r, chunk) in chunks.iter().enumerate() {
                                 ui.group(|ui| {
-                                    let register_text =
-                                        self.numeric_display.bit_string((r + (i * 4)) as u8);
-                                    let label = ui.label(register_text.clone());
+                                    let label = ui.label(
+                                        self.numeric_display.bit_string((r + (i * 4)) as u8),
+                                    );
 
                                     let mut register = *chunk;
 
@@ -621,7 +648,6 @@ impl eframe::App for VoleUI {
                                                 .binary(8, false)
                                                 .prefix("0b"),
                                         )
-                                        //.on_hover_text(register_text)
                                         .labelled_by(label.id);
                                     } else {
                                         ui.add(
@@ -629,7 +655,6 @@ impl eframe::App for VoleUI {
                                                 .hexadecimal(2, false, true)
                                                 .prefix("0x"),
                                         )
-                                        //.on_hover_text(register_text)
                                         .labelled_by(label.id);
                                     }
                                 });
@@ -659,7 +684,7 @@ impl eframe::App for VoleUI {
                                         let memory_text = self
                                             .numeric_display
                                             .byte_string((r + (i * chunk_size)) as u8);
-                                        let label = ui.label(memory_text.clone());
+                                        let label = ui.label(memory_text);
 
                                         let mut memory = *chunk;
 
@@ -669,7 +694,6 @@ impl eframe::App for VoleUI {
                                                     .binary(8, false)
                                                     .prefix("0b"),
                                             )
-                                            //.on_hover_text(register_text)
                                             .labelled_by(label.id);
                                         } else {
                                             ui.add(
@@ -677,7 +701,6 @@ impl eframe::App for VoleUI {
                                                     .hexadecimal(2, false, true)
                                                     .prefix("0x"),
                                             )
-                                            //.on_hover_text(register_text)
                                             .labelled_by(label.id);
                                         }
                                     });
