@@ -71,10 +71,6 @@ pub struct VoleUI {
     #[serde(skip)]
     rom: Rom,
 
-    // TODO: Remove skip
-    #[serde(skip)]
-    execution_speed: usize,
-
     #[serde(skip)]
     active_cell_index: Option<usize>,
 
@@ -100,12 +96,6 @@ pub struct VoleUI {
     cycle_timer: f32,
 
     #[serde(skip)]
-    cycle_speed: usize,
-
-    #[serde(skip)]
-    step_cycle: Option<bool>,
-
-    #[serde(skip)]
     program_counter: u8,
 
     #[serde(skip)]
@@ -125,7 +115,6 @@ impl Default for VoleUI {
             // TODO: Default
             //rom: Rom::new(),
             rom: new_rom,
-            execution_speed: 1,
             active_cell_index: None,
             active_cell_string: "".to_owned(),
             hex_regex: Regex::new(HEX_STR).expect("Hex regex failed to be created"),
@@ -134,8 +123,6 @@ impl Default for VoleUI {
             show_export: false,
             show_help: false,
             cycle_timer: 0.0,
-            cycle_speed: 0,
-            step_cycle: None,
             program_counter: 0,
             execution_mode: CycleExecutionMode::FullSpeed,
         }
@@ -170,36 +157,31 @@ impl eframe::App for VoleUI {
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if self.vole.running() {
-            match self.step_cycle {
-                Some(step) => {
-                    if step {
-                        //println!("Step");
-                        match self.vole.cycle() {
-                            Ok(_) => {
-                                self.step_cycle = Some(false);
-                            }
-                            Err(e) => {
-                                // TODO: Push to ui
-                                println!("Error: {:?}", e)
-                            }
-                        };
+            match self.execution_mode {
+                CycleExecutionMode::FullSpeed => {
+                    if let Err(e) = self.vole.cycle() {
+                        // TODO: Push to ui
+                        println!("Error: {:?}", e)
                     }
                 }
-                None => {
-                    // TODO: Use actual delta time
+                CycleExecutionMode::Timer(limit) => {
                     self.cycle_timer += 1.0 / 60.0;
 
-                    if self.cycle_timer >= self.cycle_speed as f32 {
-                        //println!("Cycle");
-                        match self.vole.cycle() {
-                            Ok(_) => {
-                                self.cycle_timer = 0.0;
-                            }
-                            Err(e) => {
-                                // TODO: Push to ui
-                                println!("Error: {:?}", e)
-                            }
+                    if self.cycle_timer >= limit {
+                        self.cycle_timer = 0.0;
+                        if let Err(e) = self.vole.cycle() {
+                            // TODO: Push to ui
+                            println!("Error: {:?}", e)
                         }
+                    }
+                }
+                CycleExecutionMode::Manual(step) => {
+                    if step {
+                        if let Err(e) = self.vole.cycle() {
+                            // TODO: Push to ui
+                            println!("Error: {:?}", e)
+                        }
+                        self.execution_mode = CycleExecutionMode::Manual(false);
                     }
                 }
             }
@@ -549,12 +531,10 @@ impl eframe::App for VoleUI {
                                 {
                                     self.vole.load_rom(self.rom.bytes());
                                     self.vole.start(StartMode::Reset);
-                                    self.cycle_speed = 0;
-                                    self.cycle_timer = 0.0;
-                                    self.step_cycle = None;
+                                    self.execution_mode = CycleExecutionMode::FullSpeed;
                                 }
                             }
-                            CycleExecutionMode::Timer(_) => {
+                            CycleExecutionMode::Timer(limit) => {
                                 if ui
                                     .button("Run")
                                     .on_hover_text("Executes the program at the execution speed.")
@@ -562,17 +542,18 @@ impl eframe::App for VoleUI {
                                 {
                                     self.vole.load_rom(self.rom.bytes());
                                     self.vole.start(StartMode::Reset);
-                                    self.cycle_speed = self.execution_speed.max(1);
-                                    self.cycle_timer = self.execution_speed as f32;
-                                    self.step_cycle = None;
+                                    //self.cycle_timer = limit;
                                 }
+                                let mut speed_limit = limit;
                                 ui.add(
-                                    egui::Slider::new(&mut self.execution_speed, 1..=10)
+                                    egui::Slider::new(&mut speed_limit, 1.0..=10.0)
+                                        .step_by(0.5)
                                         .text("Execution Speed"),
                                 )
                                 .on_hover_text(
                                     "The number of seconds it takes to execute one cycle.",
                                 );
+                                self.execution_mode = CycleExecutionMode::Timer(speed_limit);
                             }
                             CycleExecutionMode::Manual(_) => {
                                 if ui
@@ -580,10 +561,9 @@ impl eframe::App for VoleUI {
                                     .on_hover_text("Each cycle needs to be manually advanced.")
                                     .clicked()
                                 {
-                                    // TODO: Pause after each step of the cycle
                                     self.vole.load_rom(self.rom.bytes());
                                     self.vole.start(StartMode::Reset);
-                                    self.step_cycle = Some(false);
+                                    self.execution_mode = CycleExecutionMode::Manual(false);
                                 }
 
                                 if ui
@@ -591,7 +571,7 @@ impl eframe::App for VoleUI {
                                     .on_hover_text("Execute Next Cycle")
                                     .clicked()
                                 {
-                                    self.step_cycle = Some(true);
+                                    self.execution_mode = CycleExecutionMode::Manual(true);
                                 }
                             }
                         }
@@ -685,13 +665,14 @@ impl eframe::App for VoleUI {
                 };
                 ui.label(running);
 
-                let cycle_text = if self.step_cycle.is_some() {
-                    "Manually stepping cycle".to_string()
-                } else {
-                    format!(
-                        "Next Cycle Time: {:.1} / {}",
-                        self.cycle_timer, self.cycle_speed
-                    )
+                let cycle_text = match self.execution_mode {
+                    CycleExecutionMode::FullSpeed => {
+                        format!("Next Cycle Time: {:.1}", (1.0 / 60.0))
+                    }
+                    CycleExecutionMode::Timer(limit) => {
+                        format!("Next Cycle Time: {:.1} / {:.1}", self.cycle_timer, limit)
+                    }
+                    CycleExecutionMode::Manual(_) => "Manually stepping cycle".to_string(),
                 };
                 ui.label(cycle_text);
             });
