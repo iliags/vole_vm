@@ -218,7 +218,7 @@ impl eframe::App for VoleUI {
 
                 let numeric = &mut self.numeric_display;
                 for numerics in NumericDisplay::iter() {
-                    let response = ui.selectable_value(numeric, numerics, numerics.to_string());
+                    let response = ui.selectable_value(numeric, numerics, numerics.as_string());
 
                     if response.clicked() {
                         response.request_focus();

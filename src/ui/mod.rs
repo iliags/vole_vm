@@ -41,7 +41,7 @@ pub enum NumericDisplay {
 
 impl NumericDisplay {
     /// Returns the string of the numeric display
-    pub fn to_string(self) -> &'static str {
+    pub const fn as_string(&self) -> &'static str {
         match self {
             NumericDisplay::Hex => "Hex",
             NumericDisplay::Binary => "Binary",
@@ -49,7 +49,7 @@ impl NumericDisplay {
     }
 
     /// Returns the string prefix of the current numeric representation
-    pub fn prefix(&self) -> &'static str {
+    pub const fn prefix(&self) -> &'static str {
         match self {
             NumericDisplay::Hex => "0x",
             NumericDisplay::Binary => "0b",
@@ -85,7 +85,7 @@ impl NumericDisplay {
     /// Returns the radix for the current numeric display.
     ///
     /// Used for converting string numerics into types
-    pub fn radix(&self) -> u32 {
+    pub const fn radix(&self) -> u32 {
         match self {
             NumericDisplay::Hex => 16,
             NumericDisplay::Binary => 2,
