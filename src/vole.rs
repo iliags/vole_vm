@@ -167,7 +167,6 @@ impl Vole {
             }
             0x2000 => {
                 // Load register R with XY
-                // Reinterprets XY as an i8 since it's directly loaded into a register
                 self.registers[r as usize] = xy;
             }
             0x3000 => {
