@@ -196,7 +196,6 @@ impl eframe::App for VoleUI {
                 }
             }
 
-            // TODO: Spin up background thread instead of relying on egui update
             ctx.request_repaint();
         }
 
