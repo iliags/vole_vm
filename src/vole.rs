@@ -22,6 +22,11 @@ pub enum StartMode {
     KeepState,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CycleError {
+    InvalidOpcode(String),
+}
+
 impl Default for Vole {
     fn default() -> Self {
         Self {
@@ -120,7 +125,7 @@ impl Vole {
     }
 
     /// Perform a fetch-decode-execute cycle
-    pub fn cycle(&mut self) {
+    pub fn cycle(&mut self) -> Result<(), CycleError> {
         /*
            Fetch
         */
@@ -201,13 +206,14 @@ impl Vole {
                 }
             }
             0xC000 => {
-                //println!("Exiting");
                 self.running = false;
             }
             _ => {
-                // TODO: Change this to vole system crash, not panic
-                panic!("Invalid opcode: {:#X}", self.ir);
+                self.running = false;
+                return Err(CycleError::InvalidOpcode(format!("0x{:04X}", self.ir)));
             }
         }
+
+        Ok(())
     }
 }

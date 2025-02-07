@@ -166,19 +166,32 @@ impl eframe::App for VoleUI {
                 Some(step) => {
                     if step {
                         //println!("Step");
-                        self.vole.cycle();
-                        self.step_cycle = Some(false);
+                        match self.vole.cycle() {
+                            Ok(_) => {
+                                self.step_cycle = Some(false);
+                            }
+                            Err(e) => {
+                                // TODO: Push to ui
+                                println!("Error: {:?}", e)
+                            }
+                        };
                     }
                 }
                 None => {
                     // TODO: Use actual delta time
                     self.cycle_timer += 1.0 / 60.0;
-                    //let limit = self.cycle_speed * 1000;
 
                     if self.cycle_timer >= self.cycle_speed as f32 {
                         //println!("Cycle");
-                        self.cycle_timer = 0.0;
-                        self.vole.cycle();
+                        match self.vole.cycle() {
+                            Ok(_) => {
+                                self.cycle_timer = 0.0;
+                            }
+                            Err(e) => {
+                                // TODO: Push to ui
+                                println!("Error: {:?}", e)
+                            }
+                        }
                     }
                 }
             }
@@ -643,10 +656,23 @@ impl eframe::App for VoleUI {
                     ui.label(ir_text);
                 });
 
-                let cycle_text = format!(
-                    "Next Cycle Time: {:.1} / {}",
-                    self.cycle_timer, self.cycle_speed
-                );
+                ui.label("");
+
+                let running = if self.vole.running() {
+                    "Device Running"
+                } else {
+                    "Device Stopped"
+                };
+                ui.label(running);
+
+                let cycle_text = if self.step_cycle.is_some() {
+                    "Manually stepping cycle".to_string()
+                } else {
+                    format!(
+                        "Next Cycle Time: {:.1} / {}",
+                        self.cycle_timer, self.cycle_speed
+                    )
+                };
                 ui.label(cycle_text);
             });
 
