@@ -60,7 +60,7 @@ impl NumericDisplay {
     pub fn bit_string(&self, byte: u8) -> String {
         match self {
             NumericDisplay::Hex => format!("0x{:01X}", byte),
-            // Note: Rust counts the "0b" as part of the display length, hence the "010b",
+            // Note: Rust counts the "0b" as part of the display length, hence the "006b",
             //  use "08b" if the prefix isn't visible.
             NumericDisplay::Binary => format!("{:#06b}", byte),
         }
@@ -70,8 +70,6 @@ impl NumericDisplay {
     pub fn byte_string(&self, byte: u8) -> String {
         match self {
             NumericDisplay::Hex => format!("0x{:02X}", byte),
-            // Note: Rust counts the "0b" as part of the display length, hence the "010b",
-            //  use "08b" if the prefix isn't visible.
             NumericDisplay::Binary => format!("{:#010b}", byte),
         }
     }
