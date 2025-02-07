@@ -129,6 +129,8 @@ impl Assembler {
                                 }
                                 ValueType::Literal(l) => {
                                     //0x2RXY
+                                    let t = 0x2u8 & r0;
+                                    eprintln!("{:#04X?}", t);
                                 }
                                 ValueType::Label(l) => {
                                     // TODO: Fix this
