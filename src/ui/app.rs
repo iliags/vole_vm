@@ -1,4 +1,4 @@
-use super::{rom::Rom, NumericDisplay, SourceEditMode};
+use super::{cycle::CycleExecutionMode, numeric::NumericDisplay, rom::Rom, source::SourceEditMode};
 use crate::{
     ui::help,
     vole::{StartMode, Vole},
@@ -104,6 +104,12 @@ pub struct VoleUI {
 
     #[serde(skip)]
     step_cycle: Option<bool>,
+
+    #[serde(skip)]
+    program_counter: u8,
+
+    #[serde(skip)]
+    execution_mode: CycleExecutionMode,
 }
 
 impl Default for VoleUI {
@@ -130,6 +136,8 @@ impl Default for VoleUI {
             cycle_timer: 0.0,
             cycle_speed: 0,
             step_cycle: None,
+            program_counter: 0,
+            execution_mode: CycleExecutionMode::FullSpeed,
         }
     }
 }
@@ -258,12 +266,12 @@ impl eframe::App for VoleUI {
                 .show(ui, |ui| {
                     ui.heading("Program Source Code");
                     // Source edit mode selection
-                    egui::ComboBox::from_label("Edit mode")
-                        .selected_text(self.source_edit_mode.to_string())
+                    egui::ComboBox::from_label("Edit Mode")
+                        .selected_text(self.source_edit_mode.as_string())
                         .show_ui(ui, |ui| {
                             let edit_mode = &mut self.source_edit_mode;
                             for mode in SourceEditMode::iter() {
-                                ui.selectable_value(edit_mode, mode, mode.to_string());
+                                ui.selectable_value(edit_mode, mode, mode.as_string());
                             }
                         });
 
@@ -509,72 +517,85 @@ impl eframe::App for VoleUI {
 
                     ui.heading("Execution");
 
+                    let label = ui.label("Program Counter Start");
                     ui.add(
-                        egui::Slider::new(&mut self.execution_speed, 1..=10)
-                            .text("Execution Speed"),
+                        egui::DragValue::new(&mut self.program_counter)
+                            .range(0..=255)
+                            .hexadecimal(2, false, true)
+                            .prefix("0x"),
                     )
-                    .on_hover_text("The number of seconds it takes to execute one cycle.");
-
-                    #[cfg(debug_assertions)]
-                    {
-                        let mut text = "0x00";
-                        let label = ui.label("Program Counter Start");
-                        ui.text_edit_singleline(&mut text)
-                            .labelled_by(label.id)
-                            .on_hover_text("Under Construction");
-                    }
+                    .labelled_by(label.id);
 
                     ui.separator();
 
-                    // TODO Disable irrelevant buttons while running
-                    ui.horizontal(|ui| {
-                        if ui
-                            .button("Run at full speed")
-                            .on_hover_text("The CPU cycles around 60 times per second.")
-                            .clicked()
-                        {
-                            self.vole.load_rom(self.rom.bytes());
-                            self.vole.start(StartMode::Reset);
-                            self.cycle_speed = 0;
-                            self.cycle_timer = 0.0;
-                            self.step_cycle = None;
-                        }
+                    let mode_box_response = egui::ComboBox::from_label("Execution Mode")
+                        .selected_text(self.execution_mode.as_string())
+                        .show_ui(ui, |ui| {
+                            let exec_mode = &mut self.execution_mode;
+                            for mode in CycleExecutionMode::iter() {
+                                ui.selectable_value(exec_mode, mode, mode.as_string());
+                            }
+                        })
+                        .response;
+                    mode_box_response.on_hover_text("How the emulator cycles execute");
 
-                        if ui
-                            .button("Run at execution speed")
-                            .on_hover_text("Executes the program at the execution speed.")
-                            .clicked()
-                        {
-                            self.vole.load_rom(self.rom.bytes());
-                            self.vole.start(StartMode::Reset);
-                            self.cycle_speed = self.execution_speed.max(1);
-                            self.cycle_timer = self.execution_speed as f32;
-                            self.step_cycle = None;
+                    ui.group(|ui| {
+                        match self.execution_mode {
+                            CycleExecutionMode::FullSpeed => {
+                                if ui
+                                    .button("Run")
+                                    .on_hover_text("The CPU cycles around 60 times per second.")
+                                    .clicked()
+                                {
+                                    self.vole.load_rom(self.rom.bytes());
+                                    self.vole.start(StartMode::Reset);
+                                    self.cycle_speed = 0;
+                                    self.cycle_timer = 0.0;
+                                    self.step_cycle = None;
+                                }
+                            }
+                            CycleExecutionMode::Timer(_) => {
+                                if ui
+                                    .button("Run")
+                                    .on_hover_text("Executes the program at the execution speed.")
+                                    .clicked()
+                                {
+                                    self.vole.load_rom(self.rom.bytes());
+                                    self.vole.start(StartMode::Reset);
+                                    self.cycle_speed = self.execution_speed.max(1);
+                                    self.cycle_timer = self.execution_speed as f32;
+                                    self.step_cycle = None;
+                                }
+                                ui.add(
+                                    egui::Slider::new(&mut self.execution_speed, 1..=10)
+                                        .text("Execution Speed"),
+                                )
+                                .on_hover_text(
+                                    "The number of seconds it takes to execute one cycle.",
+                                );
+                            }
+                            CycleExecutionMode::Manual(_) => {
+                                if ui
+                                    .button("Run")
+                                    .on_hover_text("Each cycle needs to be manually advanced.")
+                                    .clicked()
+                                {
+                                    // TODO: Pause after each step of the cycle
+                                    self.vole.load_rom(self.rom.bytes());
+                                    self.vole.start(StartMode::Reset);
+                                    self.step_cycle = Some(false);
+                                }
+
+                                if ui
+                                    .button("Next Cycle")
+                                    .on_hover_text("Execute Next Cycle")
+                                    .clicked()
+                                {
+                                    self.step_cycle = Some(true);
+                                }
+                            }
                         }
                     });
-
-                    #[cfg(debug_assertions)]
-                    {
-                        ui.separator();
-                        if ui
-                            .button("Run in steps")
-                            .on_hover_text("Each cycle needs to be manually advanced.")
-                            .clicked()
-                        {
-                            // TODO: Pause after each step of the cycle
-                            self.vole.load_rom(self.rom.bytes());
-                            self.vole.start(StartMode::Reset);
-                            self.step_cycle = Some(false);
-                        }
-
-                        if ui
-                            .button("Next Cycle")
-                            .on_hover_text("Execute Next Cycle")
-                            .clicked()
-                        {
-                            self.step_cycle = Some(true);
-                        }
-                    }
                 });
         });
 
