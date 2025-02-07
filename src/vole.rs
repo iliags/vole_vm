@@ -219,3 +219,59 @@ impl Vole {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    // TODO: Write tests
+    use super::*;
+    use rand::{self, Rng};
+
+    #[test]
+    fn load_rom() {
+        // Randomly generate a rom
+        let mut rng = rand::rng();
+        let rom_length = rng.random::<u8>() as usize;
+
+        let mut rom = vec![0; rom_length];
+        for byte in rom.iter_mut() {
+            *byte = rng.random::<u8>();
+        }
+
+        // Load the rom into the device
+        let mut device = Vole::new();
+        device.load_rom(&rom);
+
+        assert_eq!(rom, device.memory()[0..rom_length]);
+    }
+
+    #[test]
+    #[ignore]
+    fn load_rom_offset() {
+        todo!();
+    }
+
+    #[test]
+    #[ignore]
+    fn device_start() {
+        todo!();
+    }
+
+    #[test]
+    #[ignore]
+    fn device_cycle() {
+        todo!();
+    }
+
+    // TODO: Fuzzed variation
+    #[test]
+    fn invalid_opcode() {
+        let mut device = Vole::new();
+
+        let empty_rom = [0x0000];
+        device.load_rom(&empty_rom);
+        device.start(StartMode::Reset);
+
+        let result = device.cycle().unwrap_err();
+        assert_eq!(result, CycleError::InvalidOpcode("0x0000".to_string()));
+    }
+}
