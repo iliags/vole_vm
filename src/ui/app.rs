@@ -439,7 +439,7 @@ impl eframe::App for VoleUI {
                                                         let radix = self.numeric_display.radix();
 
                                                         let opcode = byte_string
-                                                            .strip_prefix("0x")
+                                                            .strip_prefix(prefix)
                                                             .unwrap_or_default();
 
                                                         if let Some((lhs, rhs)) =
