@@ -4,6 +4,7 @@
   - CSV
   - Markdown table
 - Execution log
+- Replace user facing text with the `fluent` crate
 
 ## Assembler
 
