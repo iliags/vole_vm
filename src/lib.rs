@@ -4,6 +4,9 @@
 /// Vole virtual machine
 pub mod vole;
 
+/// Simple assembler
+pub mod assembler;
+
 /// UI
 mod ui;
 pub use ui::VoleUI;
