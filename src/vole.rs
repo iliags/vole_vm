@@ -15,7 +15,7 @@ pub struct Vole {
 /// Machine start mode
 #[derive(Debug, PartialEq)]
 pub enum StartMode {
-    /// Reset the program counter and instruction counter
+    /// Reset the registers, program counter and instruction counter
     Reset,
 
     /// Keep the state from the previous execution
@@ -92,12 +92,12 @@ impl Vole {
         self.memory[address as usize] = value;
     }
 
-    /// Get the value of a memory address
+    /// Returns the value of a memory address
     pub fn memory_value(&mut self, address: u8) -> u8 {
         self.memory[address as usize]
     }
 
-    /// Get the memory
+    /// Returns the memory cells
     pub fn memory(&self) -> &[u8] {
         &self.memory
     }
@@ -126,6 +126,7 @@ impl Vole {
 
     /// Perform a fetch-decode-execute cycle
     pub fn cycle(&mut self) -> Result<(), CycleError> {
+        // TODO: Execution trace
         /*
            Fetch
         */
@@ -134,7 +135,8 @@ impl Vole {
 
         //println!("{:#x}", self.ir);
 
-        // Increment program counter now, the jump instruction overwrite this during the execute step
+        // TODO: Store PC in execution trace prior to incrementing
+        // Increment program counter now, the jump instruction will overwrite this during the execute step
         self.pc += 2;
 
         /*
@@ -173,7 +175,7 @@ impl Vole {
                 self.registers[r as usize] = reg_s.wrapping_add(reg_t) as u8;
             }
             0x6000 => {
-                // Due to the specification requirements, this machine converts to the lowest precision available and back to i8.
+                // Due to the specification requirements, this machine converts to the lowest precision available and back to u8.
                 // TODO: Implement the FP operation as described in the book
 
                 // Add register S and register T as floating point, store result in R
