@@ -71,6 +71,14 @@ pub struct VoleUI {
     #[serde(skip)]
     rom: Rom,
 
+    // TODO: Remove skip
+    #[serde(skip)]
+    execution_mode: CycleExecutionMode,
+
+    // TODO: Remove skip
+    #[serde(skip)]
+    program_counter: u8,
+
     #[serde(skip)]
     active_cell_index: Option<usize>,
 
@@ -94,12 +102,6 @@ pub struct VoleUI {
 
     #[serde(skip)]
     cycle_timer: f32,
-
-    #[serde(skip)]
-    program_counter: u8,
-
-    #[serde(skip)]
-    execution_mode: CycleExecutionMode,
 }
 
 impl Default for VoleUI {
@@ -115,6 +117,8 @@ impl Default for VoleUI {
             // TODO: Default
             //rom: Rom::new(),
             rom: new_rom,
+            execution_mode: CycleExecutionMode::FullSpeed,
+            program_counter: 0,
             active_cell_index: None,
             active_cell_string: "".to_owned(),
             hex_regex: Regex::new(HEX_STR).expect("Hex regex failed to be created"),
@@ -123,8 +127,6 @@ impl Default for VoleUI {
             show_export: false,
             show_help: false,
             cycle_timer: 0.0,
-            program_counter: 0,
-            execution_mode: CycleExecutionMode::FullSpeed,
         }
     }
 }
