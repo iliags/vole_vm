@@ -119,6 +119,33 @@ impl Assembler {
                         eprintln!("lhs: {:?}\nrhs: {:?}", lhs, rhs);
 
                         // TODO: Figure out which opcode to use based on arguments provided
+                        let op = match lhs {
+                            ValueType::Register(r0) => match rhs {
+                                ValueType::Register(r1) => {
+                                    //0x4RXY
+                                }
+                                ValueType::Address(a) => {
+                                    //0x1RXY
+                                }
+                                ValueType::Literal(l) => {
+                                    //0x2RXY
+                                }
+                                ValueType::Label(l) => {
+                                    // TODO: Fix this
+                                    let msg = format!("Cannot store {} in register", l);
+                                    println!("{}", msg);
+                                    continue;
+                                }
+                            },
+                            ValueType::Address(_) => {
+                                //0x3RXY
+                            }
+                            _ => {
+                                // TODO: Fix this
+                                println!("Failed to determine ld type");
+                                continue;
+                            }
+                        };
                     }
                     "halt" => {
                         result.push(0xC0);
