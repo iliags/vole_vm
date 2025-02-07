@@ -1,3 +1,4 @@
+/// Vole virtual machine representation
 pub struct Vole {
     memory: Vec<u8>,
     registers: Vec<u8>,
@@ -11,9 +12,13 @@ pub struct Vole {
     running: bool,
 }
 
+/// Machine start mode
 #[derive(Debug, PartialEq)]
 pub enum StartMode {
+    /// Reset the program counter and instruction counter
     Reset,
+
+    /// Keep the state from the previous execution
     KeepState,
 }
 
@@ -30,6 +35,7 @@ impl Default for Vole {
 }
 
 impl Vole {
+    /// Create a new machine instance
     pub fn new() -> Self {
         Self {
             ..Default::default()
@@ -98,6 +104,7 @@ impl Vole {
         self.registers = vec![0; 16];
     }
 
+    /// Get the registers
     pub fn registers(&self) -> &[u8] {
         &self.registers
     }
