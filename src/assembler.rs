@@ -14,6 +14,8 @@ mod tests {
         const TEST_RESULT: &[u8] = &[
             0x20, 0x00, 0x25, 0xFF, 0x14, 0x44, 0xB4, 0x0A, 0x35, 0x46, 0xC0, 0x00,
         ];
+
+        // TODO: Add test code for three argument operands
         const TEST_SOURCE: &str = "
 ld r0,0x00        ; Load 0x00 into r0
 LD R5, 0xFF        ; Load 0xFF into r5
