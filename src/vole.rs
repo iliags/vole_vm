@@ -232,7 +232,6 @@ impl Vole {
 
 #[cfg(test)]
 mod tests {
-    // TODO: Write tests
     use super::*;
     use rand::{self, Rng};
 
@@ -318,12 +317,6 @@ mod tests {
         assert_eq!(rom, device.memory()[0..rom_length]);
         assert_ne!(device.registers(), random_registers);
         assert_ne!(device.program_counter(), random_pc);
-    }
-
-    #[test]
-    #[ignore]
-    fn device_cycle() {
-        todo!();
     }
 
     // TODO: Fuzzed variation
