@@ -7,6 +7,11 @@ include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 description = "A software implementation of the Vole virtual machine."
 build = "build.rs"
 
+[lints.rust]
+unsafe_op_in_unsafe_fn = "warn"
+missing_docs = "warn"
+unsafe_code = "deny"
+
 [dependencies]
 egui = { version = "0.31", features = ["color-hex"] }
 eframe = { version = "0.31", default-features = false, features = [
