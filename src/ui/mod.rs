@@ -5,6 +5,9 @@ pub use app::VoleUI;
 // ROM
 mod rom;
 
+// Help text
+mod help;
+
 use strum_macros::EnumIter;
 
 /// The form the source code is being edited in

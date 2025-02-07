@@ -1,5 +1,8 @@
 use super::{rom::Rom, NumericDisplay, SourceEditMode};
-use crate::vole::{StartMode, Vole};
+use crate::{
+    ui::help,
+    vole::{StartMode, Vole},
+};
 use egui::{scroll_area::ScrollBarVisibility, Vec2};
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 use regex::Regex;
@@ -91,6 +94,9 @@ pub struct VoleUI {
     show_export: bool,
 
     #[serde(skip)]
+    show_help: bool,
+
+    #[serde(skip)]
     cycle_timer: f32,
 
     #[serde(skip)]
@@ -120,6 +126,7 @@ impl Default for VoleUI {
             binary_regex: Regex::new(BINARY_STR).unwrap(),
             vole: Vole::new(),
             show_export: false,
+            show_help: false,
             cycle_timer: 0.0,
             cycle_speed: 0,
             step_cycle: None,
@@ -204,8 +211,29 @@ impl eframe::App for VoleUI {
                         response.request_focus();
                     }
                 }
+
+                // TODO: Tool window with numeric converter between decimal, hex, and binary.
+
+                #[cfg(debug_assertions)]
+                {
+                    ui.separator();
+
+                    ui.toggle_value(&mut self.show_help, "Help");
+                }
             });
         });
+
+        /*
+            Help window
+        */
+        egui::Window::new("Help")
+            .open(&mut self.show_help)
+            .show(ctx, |ui| {
+                egui::ScrollArea::both().show(ui, |ui| {
+                    ui.heading("Assembly Cheatsheet");
+                    ui.label(help::ASM_SYNTAX);
+                });
+            });
 
         /*
            Source code editing panel
