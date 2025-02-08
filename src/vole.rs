@@ -147,7 +147,9 @@ impl Vole {
 
         // TODO: Store PC in execution trace prior to incrementing
         // Increment program counter now, the jump instruction will overwrite this during the execute step
-        self.pc += 2;
+        if self.ir != 0xC000 {
+            self.pc += 2;
+        }
 
         /*
            Decode
