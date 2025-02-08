@@ -512,7 +512,7 @@ mod tests {
             let reg = match decimal_to_register_string(i) {
                 Ok(r) => r,
                 Err(e) => {
-                    println!("Invalid register {}", e);
+                    eprintln!("Invalid register {}", e);
                     "r0".to_owned()
                 }
             };
@@ -600,15 +600,11 @@ continue:
         let asm = Assembler::new();
         let result = asm.assemble(TEST_SOURCE.to_string());
 
-        eprintln!("---------------------------");
-        eprintln!("Output:\n{:#04X?}", result);
-
         assert_eq!(result, TEST_RESULT);
     }
 
     #[test]
     fn mnemonics() {
-        // TODO: Add test code for three argument operands
         const MNEMONIC_SOURCE: &str = "
 .org 0x01           ; Offset start by 1
 
@@ -653,9 +649,6 @@ continue:
 
         let asm = Assembler::new();
         let result = asm.assemble(MNEMONIC_SOURCE.to_string());
-
-        eprintln!("---------------------------");
-        eprintln!("Output:\n{:#04X?}", result);
 
         assert_eq!(result, MNEMONIC_RESULT);
     }
