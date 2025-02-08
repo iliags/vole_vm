@@ -73,7 +73,7 @@ Although not part of the specification, there are so few operations that a simpl
     - Combines the LOAD, STORE, and MOV op-codes.
     - `src` can be a register, memory address, or value
     - `dest` can be a register or memory address
-  - `adds r, s, t` - Adds registers `s` and `t` as two's compliment, stores the result in register `r`.
+  - `adds r,s,t` - Adds registers `s` and `t` as two's compliment, stores the result in register `r`.
   - `addf r,s,t` - Adds registers `s` and `t` as floating point, stores the result in register `r`.
   - `or r,s,t` - OR the bit patterns in `s` and `t`, stores the result in register `r`.
   - `and r,s,t` - AND the bit patterns in `s` and `t`, stores the result in register `r`.
