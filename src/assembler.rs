@@ -49,193 +49,195 @@ impl Assembler {
             let line = line.split_once(';').map_or(line, |(before, _)| before);
             let line = line.trim_end();
 
-            let parts: Vec<&str> = line.split_whitespace().collect();
+            let (pre, post) = match line.split_once(" ") {
+                Some((pre, post)) => (pre, post),
+                None => (line, ""),
+            };
 
-            if parts.len() > 0 {
-                match parts[0].to_lowercase().as_str() {
-                    "ld" => {
-                        if parts.len() < 2 {
+            match pre.to_lowercase().as_str() {
+                "ld" => {
+                    /*
+                    if parts.len() < 2 {
+                        // TODO: Fix this
+                        println!("Not enough arguments: {:?}", parts);
+                        continue;
+                    }*/
+
+                    let (lhs, rhs) = self.split_two_args(&post);
+                    eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
+
+                    let lhs = match self.resolve_argument(&lhs) {
+                        Ok(v) => v,
+                        Err(e) => {
                             // TODO: Fix this
-                            println!("Not enough arguments: {:?}", parts);
-                            continue;
+                            println!("Fix this: {:?}", e);
+                            ValueType::Literal(0x00)
                         }
+                    };
+                    let rhs = match self.resolve_argument(&rhs) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            // TODO: Fix this
+                            println!("Fix this: {:?}", e);
+                            ValueType::Literal(0x00)
+                        }
+                    };
+                    eprintln!("lhs: {:?}\nrhs: {:?}", lhs, rhs);
 
-                        let (lhs, rhs) = self.split_two_args(&parts);
-                        eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
+                    match lhs {
+                        ValueType::Register(r0) => match rhs {
+                            ValueType::Register(r1) => {
+                                //0x4RXY
+                                // TODO: Not tested
+                                let high = (0x4u8 << 4) | r0;
+                                let low = r1;
 
-                        let lhs = match self.resolve_argument(&lhs) {
-                            Ok(v) => v,
-                            Err(e) => {
-                                // TODO: Fix this
-                                println!("Fix this: {:?}", e);
-                                ValueType::Literal(0x00)
+                                eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
+                                result.push(high);
+                                result.push(low);
                             }
-                        };
-                        let rhs = match self.resolve_argument(&rhs) {
-                            Ok(v) => v,
-                            Err(e) => {
-                                // TODO: Fix this
-                                println!("Fix this: {:?}", e);
-                                ValueType::Literal(0x00)
+                            ValueType::Address(a) => {
+                                //0x1RXY
+                                let high = (0x1u8 << 4) | r0;
+                                let low = a;
+
+                                eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
+                                result.push(high);
+                                result.push(low);
                             }
-                        };
-                        eprintln!("lhs: {:?}\nrhs: {:?}", lhs, rhs);
+                            ValueType::Literal(l) => {
+                                //0x2RXY
+                                let high = (0x2u8 << 4) | r0;
+                                let low = l;
 
-                        match lhs {
-                            ValueType::Register(r0) => match rhs {
-                                ValueType::Register(r1) => {
-                                    //0x4RXY
-                                    // TODO: Not tested
-                                    let high = (0x4u8 << 4) | r0;
-                                    let low = r1;
-
-                                    eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
-                                    result.push(high);
-                                    result.push(low);
-                                }
-                                ValueType::Address(a) => {
-                                    //0x1RXY
-                                    let high = (0x1u8 << 4) | r0;
+                                eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
+                                result.push(high);
+                                result.push(low);
+                            }
+                            ValueType::Label(l) => {
+                                // TODO: Fix this
+                                let msg = format!("Cannot store {} in register", l);
+                                println!("{}", msg);
+                                continue;
+                            }
+                        },
+                        ValueType::Address(a) => {
+                            //0x3RXY
+                            match rhs {
+                                ValueType::Register(r) => {
+                                    let high = (0x3u8 << 4) | r;
                                     let low = a;
 
                                     eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
                                     result.push(high);
                                     result.push(low);
                                 }
-                                ValueType::Literal(l) => {
-                                    //0x2RXY
-                                    let high = (0x2u8 << 4) | r0;
-                                    let low = l;
-
-                                    eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
-                                    result.push(high);
-                                    result.push(low);
-                                }
-                                ValueType::Label(l) => {
-                                    // TODO: Fix this
-                                    let msg = format!("Cannot store {} in register", l);
-                                    println!("{}", msg);
-                                    continue;
-                                }
-                            },
-                            ValueType::Address(a) => {
-                                //0x3RXY
-                                match rhs {
-                                    ValueType::Register(r) => {
-                                        let high = (0x3u8 << 4) | r;
-                                        let low = a;
-
-                                        eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
-                                        result.push(high);
-                                        result.push(low);
-                                    }
-                                    other => {
-                                        // TODO: Fix this
-                                        let msg = format!("Cannot store {:?} in memory", other);
-                                        println!("{}", msg);
-                                        continue;
-                                    }
-                                };
-                            }
-                            _ => {
-                                // TODO: Fix this
-                                println!("Failed to determine ld type");
-                                continue;
-                            }
-                        };
-                    }
-                    "adds" => {
-                        // TODO: Not tested
-                        //0x5RST
-                    }
-                    "addf" => {
-                        // TODO: Not tested
-                        //0x6RST
-                    }
-                    "or" => {
-                        // TODO: Not tested
-                        //0x7RST
-                    }
-                    "and" => {
-                        // TODO: Not tested
-                        //0x8RST
-                    }
-                    "xor" => {
-                        // TODO: Not tested
-                        //0x9RST
-                    }
-                    "rot" => {
-                        // TODO: Not tested
-                        //0xAR0X
-                    }
-                    "halt" => {
-                        result.push(0xC0);
-                        result.push(0x00);
-                        eprintln!("Pushing 0xC0, 0x00");
-                    }
-                    "jp" => {
-                        // TODO: Handle labels
-                        // TODO: Add support for multiple jump instructions to the same label
-                        //0xBRXY
-                        let (lhs, rhs) = self.split_two_args(&parts);
-                        eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
-
-                        let lhs = match self.resolve_argument(&lhs) {
-                            Ok(v) => match v {
-                                ValueType::Register(r) => r,
                                 other => {
                                     // TODO: Fix this
-                                    let msg = format!("Invalid argument for jp {:?}", other);
+                                    let msg = format!("Cannot store {:?} in memory", other);
                                     println!("{}", msg);
                                     continue;
                                 }
-                            },
-                            Err(e) => {
+                            };
+                        }
+                        _ => {
+                            // TODO: Fix this
+                            println!("Failed to determine ld type");
+                            continue;
+                        }
+                    };
+                }
+                "adds" => {
+                    // TODO: Not tested
+                    //0x5RST
+                }
+                "addf" => {
+                    // TODO: Not tested
+                    //0x6RST
+                }
+                "or" => {
+                    // TODO: Not tested
+                    //0x7RST
+                }
+                "and" => {
+                    // TODO: Not tested
+                    //0x8RST
+                }
+                "xor" => {
+                    // TODO: Not tested
+                    //0x9RST
+                }
+                "rot" => {
+                    // TODO: Not tested
+                    //0xAR0X
+                }
+                "halt" => {
+                    result.push(0xC0);
+                    result.push(0x00);
+                    eprintln!("Pushing 0xC0, 0x00");
+                }
+                "jp" => {
+                    // TODO: Handle labels
+                    // TODO: Add support for multiple jump instructions to the same label
+                    //0xBRXY
+                    let (lhs, rhs) = self.split_two_args(&post);
+                    eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
+
+                    let lhs = match self.resolve_argument(&lhs) {
+                        Ok(v) => match v {
+                            ValueType::Register(r) => r,
+                            other => {
                                 // TODO: Fix this
-                                let msg = format!("Error resoloving argument {}", e);
+                                let msg = format!("Invalid argument for jp {:?}", other);
                                 println!("{}", msg);
                                 continue;
                             }
-                        };
+                        },
+                        Err(e) => {
+                            // TODO: Fix this
+                            let msg = format!("Error resoloving argument {}", e);
+                            println!("{}", msg);
+                            continue;
+                        }
+                    };
 
-                        let high = (0xBu8 << 4) | lhs;
-                        let low = 0xFF;
+                    let high = (0xBu8 << 4) | lhs;
+                    let low = 0xFF;
 
-                        eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
-                        result.push(high);
-                        result.push(low);
+                    eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
+                    result.push(high);
+                    result.push(low);
 
-                        let call_address = result.len() - 1;
-                        labels.insert(rhs, call_address as u8);
-                        eprintln!("Label call address: {}", call_address);
-                    }
-                    unknown => {
-                        if unknown.trim_end().ends_with(":") {
-                            let label = unknown.trim_end_matches(":");
+                    let call_address = result.len() - 1;
+                    labels.insert(rhs, call_address as u8);
+                    eprintln!("Label call address: {}", call_address);
+                }
+                unknown => {
+                    if unknown.trim_end().ends_with(":") {
+                        let label = unknown.trim_end_matches(":");
 
-                            if labels.contains_key(label) {
-                                eprintln!("Labels");
+                        if labels.contains_key(label) {
+                            eprintln!("Labels");
 
-                                // TODO: Check for unresolved labels
-                                match labels.remove_entry(label) {
-                                    Some((_k, call)) => {
-                                        // The target jump address will be the next line
-                                        let target = result.len() as u8;
-                                        result[call as usize] = target;
+                            // TODO: Check for unresolved labels
+                            match labels.remove_entry(label) {
+                                Some((_k, call)) => {
+                                    // The target jump address will be the next line
+                                    let target = result.len() as u8;
+                                    result[call as usize] = target;
 
-                                        eprintln!("Storing jump target {:#04X?}", target);
-                                    }
-                                    None => {
-                                        // TODO: Fix this
-                                        let msg = format!("Error resoloving label: {}", label);
-                                        println!("{}", msg);
-                                        continue;
-                                    }
+                                    eprintln!("Storing jump target {:#04X?}", target);
+                                }
+                                None => {
+                                    // TODO: Fix this
+                                    let msg = format!("Error resoloving label: {}", label);
+                                    println!("{}", msg);
+                                    continue;
                                 }
                             }
-                        } else {
-                            eprintln!("Unknown part: {}", parts[0]);
                         }
+                    } else {
+                        eprintln!("Unknown mnemonic: {}", pre);
                     }
                 }
             }
@@ -345,22 +347,19 @@ impl Assembler {
         Ok(value)
     }
 
-    fn split_two_args(&self, args: &[&str]) -> (String, String) {
-        if args.len() < 3 {
-            // There is no space between arguments, we can split at the comma
-            let result: Vec<_> = args[1].split(",").collect();
-
-            return (result[0].to_string(), result[1].to_string());
-        } else {
-            // The left side will have a trailing comma if a space is used
-            let result: Vec<_> = args[1].split(",").collect();
-            return (result[0].to_owned(), args[2].to_string());
-        };
+    fn split_two_args(&self, args: &str) -> (String, String) {
+        let result: Vec<&str> = args.split(",").flat_map(|s| s.split(", ")).collect();
+        (result[0].trim().to_string(), result[1].trim().to_string())
     }
 
-    fn split_three_args(&self, args: &[&str]) -> (String, String, String) {
-        // TODO
-        ("a".to_string(), "b".to_string(), "c".to_string())
+    fn split_three_args(&self, args: &str) -> (String, String, String) {
+        let result: Vec<&str> = args.split(",").flat_map(|s| s.split(", ")).collect();
+        (
+            result[0].trim().to_string(),
+            result[1].trim().to_string(),
+            result[2].trim().to_string(),
+        )
+        //("a".to_string(), "b".to_string(), "c".to_string())
     }
 }
 
@@ -412,11 +411,16 @@ mod tests {
     #[test]
     fn split_args_two() {
         let asm = Assembler::new();
-        let (l, r) = asm.split_two_args(&["op", "a,b"]);
+
+        let (l, r) = asm.split_two_args(&"a,b");
         assert_eq!(l, "a");
         assert_eq!(r, "b");
 
-        let (l, r) = asm.split_two_args(&["op", "a,", "b"]);
+        let (l, r) = asm.split_two_args("a, b");
+        assert_eq!(l, "a");
+        assert_eq!(r, "b");
+
+        let (l, r) = asm.split_two_args("a , b");
         assert_eq!(l, "a");
         assert_eq!(r, "b");
     }
@@ -424,29 +428,30 @@ mod tests {
     #[test]
     fn split_args_three() {
         let asm = Assembler::new();
-        let (l, m, r) = asm.split_three_args(&["op", "a,b,c"]);
+
+        let (l, m, r) = asm.split_three_args(&"a,b,c");
         assert_eq!(l, "a");
         assert_eq!(m, "b");
         assert_eq!(r, "c");
 
-        let (l, m, r) = asm.split_three_args(&["op", "a,", "b,", "c"]);
+        let (l, m, r) = asm.split_three_args(&"a, b, c");
         assert_eq!(l, "a");
         assert_eq!(m, "b");
         assert_eq!(r, "c");
 
-        let (l, m, r) = asm.split_three_args(&["op", "a,b,", "c"]);
+        let (l, m, r) = asm.split_three_args(&"a, b,c");
         assert_eq!(l, "a");
         assert_eq!(m, "b");
         assert_eq!(r, "c");
 
-        let (l, m, r) = asm.split_three_args(&["op", "a,", "b,c"]);
+        let (l, m, r) = asm.split_three_args(&"a,b, c");
         assert_eq!(l, "a");
         assert_eq!(m, "b");
         assert_eq!(r, "c");
     }
 
     #[test]
-    fn test_program() {
+    fn demo_program() {
         const TEST_RESULT: &[u8] = &[
             0x20, 0x00, // Load 0x00 into r0
             0x25, 0xFF, // Load 0xFF into r5
@@ -470,7 +475,39 @@ continue:
     ld (0x46), r5  ; Store r5 into mem 0x46
     halt           ; Quit";
 
-        //println!("Input:\n{}\n", TEST_SOURCE);
+        let asm = Assembler::new();
+        let result = asm.assemble(TEST_SOURCE.to_string());
+
+        eprintln!("---------------------------");
+        eprintln!("Output:\n{:#04X?}", result);
+
+        assert_eq!(result, TEST_RESULT);
+    }
+
+    #[test]
+    fn mnemonics() {
+        const TEST_RESULT: &[u8] = &[
+            0x20, 0x00, // Load 0x00 into r0
+            0x25, 0xFF, // Load 0xFF into r5
+            0x14, 0x44, // Load mem 0x44 into r4
+            0xB4, 0x0A, // If r4 == r0, jump to mem 0x0A (skip next line)
+            0x25, 0x01, // load 0x01 into r5
+            0x35, 0x46, // Store r5 into mem 0x46
+            0xC0, 0x00, // Quit
+        ];
+
+        // TODO: Add test code for three argument operands
+        const TEST_SOURCE: &str = "
+ld r0,0x00        ; Load 0x00 into r0
+LD R5, 0xFF        ; Load 0xFF into r5
+Ld r4, (0x44)      ; Load mem 0x44 into r4
+
+jp r4, continue    ; If r4 == r0, jump to continue
+lD r5, 0x01        ; Load 0x01 into r5
+
+continue:
+    ld (0x46), r5  ; Store r5 into mem 0x46
+    halt           ; Quit";
 
         let asm = Assembler::new();
         let result = asm.assemble(TEST_SOURCE.to_string());
