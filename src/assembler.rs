@@ -27,7 +27,8 @@ impl Assembler {
         let mut labels: HashMap<String, u8> = HashMap::new();
 
         let lines: Vec<&str> = source_code.split_terminator("\n").collect();
-        eprintln!("Line count: {}\n", lines.len());
+        eprintln!("---------------------------");
+        eprintln!("Line count: {}", lines.len());
 
         // TODO: Return errors with line numbers
         for (line_num, line) in lines.iter().enumerate() {
@@ -238,6 +239,9 @@ impl Assembler {
             }
         }
 
+        eprintln!("---------------------------");
+        eprintln!("Assembler completed");
+
         result
     }
 
@@ -357,10 +361,50 @@ impl Assembler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::{self, Rng};
 
     #[test]
-    //#[ignore]
-    fn test_compile() {
+    fn ld() {
+        let asm = Assembler::new();
+
+        let l1 = "ld r0, 0x01".to_owned();
+        assert_eq!(asm.assemble(l1), [0x20, 0x01]);
+
+        let l2 = "ld r0, 0b00000001".to_owned();
+        assert_eq!(asm.assemble(l2), [0x20, 0x01]);
+    }
+
+    #[test]
+    fn ld_0x2() {
+        let asm = Assembler::new();
+        let mut rng = rand::rng();
+
+        let mut program = String::new();
+        for i in 0..16 {
+            let reg = match decimal_to_register_string(i) {
+                Ok(r) => r,
+                Err(e) => {
+                    println!("Invalid register {}", e);
+                    "r0".to_owned()
+                }
+            };
+
+            let value = rng.random::<u8>();
+            let value = if rng.random_bool(0.5) {
+                format!("{:#04X?}", value)
+            } else {
+                format!("{:#010b}", value)
+            };
+            let inst = format!("ld {}, {}\n", reg, value);
+            program.push_str(&inst);
+        }
+
+        // TODO: Actually compare values
+        assert_eq!(asm.assemble(program).len(), 32);
+    }
+
+    #[test]
+    fn test_program() {
         const TEST_RESULT: &[u8] = &[
             0x20, 0x00, // Load 0x00 into r0
             0x25, 0xFF, // Load 0xFF into r5
@@ -393,5 +437,28 @@ continue:
         eprintln!("Output:\n{:#04X?}", result);
 
         assert_eq!(result, TEST_RESULT);
+    }
+
+    fn decimal_to_register_string(reg: usize) -> Result<String, String> {
+        match reg {
+            0x0 => Ok("r0".to_owned()),
+            0x0 => Ok("r0".to_owned()),
+            0x2 => Ok("r2".to_owned()),
+            0x1 => Ok("r1".to_owned()),
+            0x3 => Ok("r3".to_owned()),
+            0x4 => Ok("r4".to_owned()),
+            0x5 => Ok("r5".to_owned()),
+            0x6 => Ok("r6".to_owned()),
+            0x7 => Ok("r7".to_owned()),
+            0x8 => Ok("r8".to_owned()),
+            0x9 => Ok("r9".to_owned()),
+            0xA => Ok("ra".to_owned()),
+            0xB => Ok("rb".to_owned()),
+            0xC => Ok("rc".to_owned()),
+            0xD => Ok("rd".to_owned()),
+            0xE => Ok("re".to_owned()),
+            0xF => Ok("rf".to_owned()),
+            _ => Err(format!("Invalid register {}", reg)),
+        }
     }
 }
