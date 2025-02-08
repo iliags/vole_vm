@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.0.4
+
+- Update cargo version
+- Added CI/CD for pull requests
+
+## 0.0.3
+
+- Fix workflow
+
 ## 0.0.2
 
 - Workflow file fixes
