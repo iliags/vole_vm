@@ -1,7 +1,7 @@
 // TODO: Remove
-#![allow(warnings)]
+//#![allow(warnings)]
 
-use std::{collections::HashMap, result};
+use std::collections::HashMap;
 
 #[derive(Debug, Default)]
 pub struct Assembler;
@@ -21,6 +21,9 @@ impl Assembler {
         }
     }
 
+    // TODO: Add .org
+    // TODO: Add line numbers to errors
+    // TODO: Change return type to Result<(Vec<u8>, u8), Vec<ErrorType>>
     pub fn assemble(&self, source_code: String) -> Vec<u8> {
         let mut result = Vec::new();
         // <Label, Calling Address>
@@ -78,8 +81,7 @@ impl Assembler {
                         };
                         eprintln!("lhs: {:?}\nrhs: {:?}", lhs, rhs);
 
-                        // TODO: Figure out which opcode to use based on arguments provided
-                        let op = match lhs {
+                        match lhs {
                             ValueType::Register(r0) => match rhs {
                                 ValueType::Register(r1) => {
                                     //0x4RXY
@@ -118,7 +120,7 @@ impl Assembler {
                             },
                             ValueType::Address(a) => {
                                 //0x3RXY
-                                let r = match rhs {
+                                match rhs {
                                     ValueType::Register(r) => {
                                         let high = (0x3u8 << 4) | r;
                                         let low = a;
@@ -216,7 +218,7 @@ impl Assembler {
 
                                 // TODO: Check for unresolved labels
                                 match labels.remove_entry(label) {
-                                    Some((k, call)) => {
+                                    Some((_k, call)) => {
                                         // The target jump address will be the next line
                                         let target = result.len() as u8;
                                         result[call as usize] = target;
@@ -286,6 +288,10 @@ impl Assembler {
                     println!("Fix this: {}", e);
                 }
             }
+        }
+
+        if val.trim_end().ends_with(":") {
+            return Ok(ValueType::Label(val.trim_end_matches(":").to_string()));
         }
 
         //TODO: labels
@@ -477,7 +483,6 @@ continue:
 
     fn decimal_to_register_string(reg: usize) -> Result<String, String> {
         match reg {
-            0x0 => Ok("r0".to_owned()),
             0x0 => Ok("r0".to_owned()),
             0x2 => Ok("r2".to_owned()),
             0x1 => Ok("r1".to_owned()),
