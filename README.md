@@ -120,7 +120,6 @@ Example:
 ```asm
 ; The following lines are equivalent, load memory address 254 into register 0
 ld r0,(0xFE)
-ld r0,(254)
 ld r0,(0b11111110)
 ```
 
