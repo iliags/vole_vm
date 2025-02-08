@@ -4,6 +4,10 @@
 
 An implementation of the virtual machine as specified in *Computer Science: An Overview (13th edition)* by Glenn Brookshear and Dennis Brylow.
 
+## Notes
+
+The [assembler](https://github.com/iliags/vole_vm/blob/main/src/assembler.rs) and the [virtual machine](https://github.com/iliags/vole_vm/blob/main/src/vole.rs) are self-contained, but they were constructed for use within this project. The VM has no dependencies, the assembler uses a `HashMap` for label resolution, and they both use the `rand` crate for tests.
+
 ## Building
 
 ### Desktop
@@ -60,7 +64,7 @@ in Section 1.7 and summarized in Figure 1.24.
 
 The specification has the machine implement aspects of knowledge which is covered in the book, however it doesn't specify concrete types for the memory and registers. Based solely on the specification, signed 8-bit integers would be the ideal type for registers and memory values, however this doesn't work in practice. The floating point operation could be implemented manually, however storing the result into the register would likely cause information loss or an incorrect result when being read back.
 
-## Assembler (WIP)
+## Assembler
 
 Although not part of the specification, there are so few operations that a simple assembly language is implemented. It's based on the Z80 assembly language since it's one of the more widely known variants that is being used in the homebrew scene.
 
@@ -86,7 +90,7 @@ Although not part of the specification, there are so few operations that a simpl
 
 ### Registers
 
-Registers are labeled as follows:
+Register labels:
 
 - `r0`
 - `r1`
