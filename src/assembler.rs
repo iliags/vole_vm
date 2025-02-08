@@ -13,9 +13,7 @@ enum ValueType {
 
 impl Assembler {
     pub fn new() -> Self {
-        Self {
-            ..Default::default()
-        }
+        Self {}
     }
 
     // TODO: Add .org
@@ -53,7 +51,7 @@ impl Assembler {
 
             match pre.to_lowercase().as_str() {
                 "ld" => {
-                    let (lhs, rhs) = self.split_two_args(&post);
+                    let (lhs, rhs) = self.split_two_args(post);
                     eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
 
                     let lhs = match self.resolve_argument(&lhs) {
@@ -140,7 +138,7 @@ impl Assembler {
                 "adds" => {
                     // TODO: Not tested
                     //0x5RST
-                    let (r, s, t) = self.resolve_rst(&post);
+                    let (r, s, t) = self.resolve_rst(post);
 
                     let high = (0x5u8 << 4) | r;
                     let low = (s << 4) | t;
@@ -153,7 +151,7 @@ impl Assembler {
                     // TODO: Not tested
                     //0x6RST
 
-                    let (r, s, t) = self.resolve_rst(&post);
+                    let (r, s, t) = self.resolve_rst(post);
 
                     let high = (0x6u8 << 4) | r;
                     let low = (s << 4) | t;
@@ -165,7 +163,7 @@ impl Assembler {
                 "or" => {
                     // TODO: Not tested
                     //0x7RST
-                    let (r, s, t) = self.resolve_rst(&post);
+                    let (r, s, t) = self.resolve_rst(post);
 
                     let high = (0x7u8 << 4) | r;
                     let low = (s << 4) | t;
@@ -177,7 +175,7 @@ impl Assembler {
                 "and" => {
                     // TODO: Not tested
                     //0x8RST
-                    let (r, s, t) = self.resolve_rst(&post);
+                    let (r, s, t) = self.resolve_rst(post);
 
                     let high = (0x8u8 << 4) | r;
                     let low = (s << 4) | t;
@@ -189,7 +187,7 @@ impl Assembler {
                 "xor" => {
                     // TODO: Not tested
                     //0x9RST
-                    let (r, s, t) = self.resolve_rst(&post);
+                    let (r, s, t) = self.resolve_rst(post);
 
                     let high = (0x9u8 << 4) | r;
                     let low = (s << 4) | t;
@@ -201,7 +199,7 @@ impl Assembler {
                 "rot" => {
                     // TODO: Not tested
                     //0xAR0X
-                    let (lhs, rhs) = self.split_two_args(&post);
+                    let (lhs, rhs) = self.split_two_args(post);
                     eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
 
                     let lhs = match self.resolve_argument(&lhs) {
@@ -237,7 +235,7 @@ impl Assembler {
                     eprintln!("lhs: {:?}\nrhs: {:?}", lhs, rhs);
 
                     let high = (0xAu8 << 4) | lhs;
-                    let low = (0 << 4) | rhs;
+                    let low = rhs;
 
                     eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
                     result.push(high);
@@ -252,7 +250,7 @@ impl Assembler {
                     // TODO: Handle labels
                     // TODO: Add support for multiple jump instructions to the same label
                     //0xBRXY
-                    let (lhs, rhs) = self.split_two_args(&post);
+                    let (lhs, rhs) = self.split_two_args(post);
                     eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
 
                     let lhs = match self.resolve_argument(&lhs) {
@@ -414,7 +412,7 @@ impl Assembler {
         };
 
         let value = value.strip_prefix(prefix).unwrap_or(value);
-        let value = u8::from_str_radix(&value, radix).unwrap_or_default();
+        let value = u8::from_str_radix(value, radix).unwrap_or_default();
 
         Ok(value)
     }
@@ -434,7 +432,7 @@ impl Assembler {
     }
 
     fn resolve_rst(&self, arg: &str) -> (u8, u8, u8) {
-        let (r, s, t) = self.split_three_args(&arg);
+        let (r, s, t) = self.split_three_args(arg);
 
         let r = match self.resolve_argument(&r) {
             Ok(v) => match v {
