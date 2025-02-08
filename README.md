@@ -68,18 +68,21 @@ Although not part of the specification, there are so few operations that a simpl
 > Hexadecimal numbers must be prefixed with `0x` and binary with `0b`.
 > Labels must be on their own line, `my_label: ld r0, 0x00` is not a valid label.
 
-- `ld dest, src` - Load a value from src into dest.
-  - Combines the LOAD, STORE, and MOV op-codes.
-  - `src` can be a register, memory address, or value
-  - `dest` can be a register or memory address
-- `adds r, s, t` - Adds registers `s` and `t` as two's compliment, stores the result in register `r`.
-- `addf r,s,t` - Adds registers `s` and `t` as floating point, stores the result in register `r`.
-- `or r,s,t` - OR the bit patterns in `s` and `t`, stores the result in register `r`.
-- `and r,s,t` - AND the bit patterns in `s` and `t`, stores the result in register `r`.
-- `xor r,s,t` - XOR the bit patterns in `s` and `t`, stores the result in register `r`.
-- `rot r,x` - Rotate the bit pattern in register `r` one bit to the right `x` times. Each time, placing the bit that started at the low order end at the high-order end.
-- `jp r,label` - Jump to the label if register `r` is equal to `r0`
-- `halt` - Stop program execution
+- Syntax
+  - `ld dest, src` - Load a value from src into dest.
+    - Combines the LOAD, STORE, and MOV op-codes.
+    - `src` can be a register, memory address, or value
+    - `dest` can be a register or memory address
+  - `adds r, s, t` - Adds registers `s` and `t` as two's compliment, stores the result in register `r`.
+  - `addf r,s,t` - Adds registers `s` and `t` as floating point, stores the result in register `r`.
+  - `or r,s,t` - OR the bit patterns in `s` and `t`, stores the result in register `r`.
+  - `and r,s,t` - AND the bit patterns in `s` and `t`, stores the result in register `r`.
+  - `xor r,s,t` - XOR the bit patterns in `s` and `t`, stores the result in register `r`.
+  - `rot r,x` - Rotate the bit pattern in register `r` one bit to the right `x` times. Each time, placing the bit that started at the low order end at the high-order end.
+  - `jp r,label` - Jump to the label if register `r` is equal to `r0`
+  - `halt` - Stop program execution
+- Emulator Specific
+  - `.org (dest)` - Places the code starting at the given memory address, also sets the program counter to the same address.
 
 ### Registers
 
