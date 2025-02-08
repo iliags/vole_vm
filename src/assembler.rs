@@ -631,7 +631,7 @@ continue:
     xor rc, r6, r7  ; XOR r6 and r7 as float, store in rc
     rot rd, 0x02    ; ROTATE rd to the right 2 times
 
-    halt           ; Quit";
+    halt            ; Quit";
 
         const MNEMONIC_RESULT: &[u8] = &[
             0x20, 0x00, // Load 0x00 into r0
