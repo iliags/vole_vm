@@ -1,6 +1,3 @@
-// TODO: Remove
-//#![allow(warnings)]
-
 use std::collections::HashMap;
 
 #[derive(Debug, Default)]
