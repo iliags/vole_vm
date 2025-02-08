@@ -1,6 +1,6 @@
 use strum_macros::EnumIter;
 
-#[derive(PartialEq, Clone, Copy, EnumIter)]
+#[derive(PartialEq, Clone, Copy, EnumIter, serde::Deserialize, serde::Serialize)]
 pub enum NumericDisplay {
     Hex,
     Binary,
