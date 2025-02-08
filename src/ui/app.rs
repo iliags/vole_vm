@@ -516,9 +516,6 @@ impl eframe::App for VoleUI {
                                     });
                                 });
                             }
-
-                            #[cfg(not(debug_assertions))]
-                            ui.label("Under Construction");
                         }
                     }
                     ui.separator();
