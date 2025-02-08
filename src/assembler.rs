@@ -404,6 +404,42 @@ mod tests {
     }
 
     #[test]
+    fn split_args_two() {
+        let asm = Assembler::new();
+        let (l, r) = asm.split_two_args(&["op", "a,b"]);
+        assert_eq!(l, "a");
+        assert_eq!(r, "b");
+
+        let (l, r) = asm.split_two_args(&["op", "a,", "b"]);
+        assert_eq!(l, "a");
+        assert_eq!(r, "b");
+    }
+
+    #[test]
+    fn split_args_three() {
+        let asm = Assembler::new();
+        let (l, m, r) = asm.split_three_args(&["op", "a,b,c"]);
+        assert_eq!(l, "a");
+        assert_eq!(m, "b");
+        assert_eq!(r, "c");
+
+        let (l, m, r) = asm.split_three_args(&["op", "a,", "b,", "c"]);
+        assert_eq!(l, "a");
+        assert_eq!(m, "b");
+        assert_eq!(r, "c");
+
+        let (l, m, r) = asm.split_three_args(&["op", "a,b,", "c"]);
+        assert_eq!(l, "a");
+        assert_eq!(m, "b");
+        assert_eq!(r, "c");
+
+        let (l, m, r) = asm.split_three_args(&["op", "a,", "b,c"]);
+        assert_eq!(l, "a");
+        assert_eq!(m, "b");
+        assert_eq!(r, "c");
+    }
+
+    #[test]
     fn test_program() {
         const TEST_RESULT: &[u8] = &[
             0x20, 0x00, // Load 0x00 into r0
