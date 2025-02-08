@@ -1,6 +1,8 @@
 // TODO: Remove
 #![allow(warnings)]
 
+use std::{collections::HashMap, result};
+
 #[derive(Debug, Default)]
 pub struct Assembler;
 
@@ -42,7 +44,7 @@ continue:
         eprintln!("---------------------------");
         eprintln!("Output:\n{:#04X?}", result);
 
-        //assert_eq!(result, TEST_RESULT);
+        assert_eq!(result, TEST_RESULT);
     }
 }
 
@@ -63,6 +65,8 @@ impl Assembler {
 
     pub fn assemble(&self, source_code: String) -> Vec<u8> {
         let mut result = Vec::new();
+        // <Label, Calling Address>
+        let mut labels: HashMap<String, u8> = HashMap::new();
 
         let lines: Vec<&str> = source_code.split_terminator("\n").collect();
         eprintln!("Line count: {}\n", lines.len());
@@ -94,19 +98,10 @@ impl Assembler {
                             continue;
                         }
 
-                        let (lhs, rhs) = if parts.len() < 3 {
-                            // There is no space between arguments, we can split at the comma
-                            let result: Vec<_> = parts[1].split(",").collect();
-
-                            (result[0], result[1])
-                        } else {
-                            // The left side will have a trailing comma if a space is used
-                            let result: Vec<_> = parts[1].split(",").collect();
-                            (result[0], parts[2])
-                        };
+                        let (lhs, rhs) = self.split_two_args(&parts);
                         eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
 
-                        let lhs = match self.resolve_argument(lhs) {
+                        let lhs = match self.resolve_argument(&lhs) {
                             Ok(v) => v,
                             Err(e) => {
                                 // TODO: Fix this
@@ -114,7 +109,7 @@ impl Assembler {
                                 ValueType::Literal(0x00)
                             }
                         };
-                        let rhs = match self.resolve_argument(rhs) {
+                        let rhs = match self.resolve_argument(&rhs) {
                             Ok(v) => v,
                             Err(e) => {
                                 // TODO: Fix this
@@ -173,21 +168,9 @@ impl Assembler {
                                         result.push(high);
                                         result.push(low);
                                     }
-                                    ValueType::Address(e) => {
+                                    other => {
                                         // TODO: Fix this
-                                        let msg = format!("Cannot store address {} in memory", e);
-                                        println!("{}", msg);
-                                        continue;
-                                    }
-                                    ValueType::Literal(e) => {
-                                        // TODO: Fix this
-                                        let msg = format!("Cannot store literal {} in memory", e);
-                                        println!("{}", msg);
-                                        continue;
-                                    }
-                                    ValueType::Label(e) => {
-                                        // TODO: Fix this
-                                        let msg = format!("Cannot store label {} in memory", e);
+                                        let msg = format!("Cannot store {:?} in memory", other);
                                         println!("{}", msg);
                                         continue;
                                     }
@@ -200,14 +183,98 @@ impl Assembler {
                             }
                         };
                     }
+                    "adds" => {
+                        // TODO: Not tested
+                        //0x5RST
+                    }
+                    "addf" => {
+                        // TODO: Not tested
+                        //0x6RST
+                    }
+                    "or" => {
+                        // TODO: Not tested
+                        //0x7RST
+                    }
+                    "and" => {
+                        // TODO: Not tested
+                        //0x8RST
+                    }
+                    "xor" => {
+                        // TODO: Not tested
+                        //0x9RST
+                    }
+                    "rot" => {
+                        // TODO: Not tested
+                        //0xAR0X
+                    }
                     "halt" => {
                         result.push(0xC0);
                         result.push(0x00);
                         eprintln!("Pushing 0xC0, 0x00");
                     }
-                    _ => {
+                    "jp" => {
                         // TODO: Handle labels
-                        eprintln!("Unknown part: {}", parts[0]);
+                        // TODO: Add support for multiple jump instructions to the same label
+                        //0xBRXY
+                        let (lhs, rhs) = self.split_two_args(&parts);
+                        eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
+
+                        let lhs = match self.resolve_argument(&lhs) {
+                            Ok(v) => match v {
+                                ValueType::Register(r) => r,
+                                other => {
+                                    // TODO: Fix this
+                                    let msg = format!("Invalid argument for jp {:?}", other);
+                                    println!("{}", msg);
+                                    continue;
+                                }
+                            },
+                            Err(e) => {
+                                // TODO: Fix this
+                                let msg = format!("Error resoloving argument {}", e);
+                                println!("{}", msg);
+                                continue;
+                            }
+                        };
+
+                        let high = (0xBu8 << 4) | lhs;
+                        let low = 0xFF;
+
+                        eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
+                        result.push(high);
+                        result.push(low);
+
+                        let call_address = result.len() - 1;
+                        labels.insert(rhs, call_address as u8);
+                        eprintln!("Label call address: {}", call_address);
+                    }
+                    unknown => {
+                        // TODO: Handle labels
+                        if unknown.trim_end().ends_with(":") {
+                            let label = unknown.trim_end_matches(":");
+
+                            if labels.contains_key(label) {
+                                eprintln!("Labels");
+
+                                match labels.get_key_value(label) {
+                                    Some((k, call)) => {
+                                        // The target jump address will be the next line
+                                        let target = result.len() as u8;
+                                        result[*call as usize] = target;
+
+                                        eprintln!("Storing jump target {:#04X?}", target);
+                                    }
+                                    None => {
+                                        // TODO: Fix this
+                                        let msg = format!("Error resoloving label: {}", label);
+                                        println!("{}", msg);
+                                        continue;
+                                    }
+                                }
+                            }
+                        } else {
+                            eprintln!("Unknown part: {}", parts[0]);
+                        }
                     }
                 }
             }
@@ -308,5 +375,23 @@ impl Assembler {
         let value = u8::from_str_radix(&value, radix).unwrap_or_default();
 
         Ok(value)
+    }
+
+    fn split_two_args(&self, args: &[&str]) -> (String, String) {
+        if args.len() < 3 {
+            // There is no space between arguments, we can split at the comma
+            let result: Vec<_> = args[1].split(",").collect();
+
+            return (result[0].to_string(), result[1].to_string());
+        } else {
+            // The left side will have a trailing comma if a space is used
+            let result: Vec<_> = args[1].split(",").collect();
+            return (result[0].to_owned(), args[2].to_string());
+        };
+    }
+
+    fn split_three_args(&self, args: &[&str]) -> (String, String, String) {
+        // TODO
+        ("a".to_string(), "b".to_string(), "c".to_string())
     }
 }
