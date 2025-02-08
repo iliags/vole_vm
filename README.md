@@ -66,6 +66,7 @@ Although not part of the specification, there are so few operations that a simpl
 
 > [!IMPORTANT]
 > Hexadecimal numbers must be prefixed with `0x` and binary with `0b`.
+> Labels must be on their own line, `my_label: ld r0, 0x00` is not a valid label.
 
 - `ld dest, src` - Load a value from src into dest.
   - Combines the LOAD, STORE, and MOV op-codes.
