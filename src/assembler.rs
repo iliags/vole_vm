@@ -12,7 +12,13 @@ mod tests {
     //#[ignore]
     fn test_compile() {
         const TEST_RESULT: &[u8] = &[
-            0x20, 0x00, 0x25, 0xFF, 0x14, 0x44, 0xB4, 0x0A, 0x35, 0x46, 0xC0, 0x00,
+            0x20, 0x00, // Load 0x00 into r0
+            0x25, 0xFF, // Load 0xFF into r5
+            0x14, 0x44, // Load mem 0x44 into r4
+            0xB4, 0x0A, // If r4 == r0, jump to mem 0x0A (skip next line)
+            0x25, 0x01, // load 0x01 into r5
+            0x35, 0x46, // Store r5 into mem 0x46
+            0xC0, 0x00, // Quit
         ];
 
         // TODO: Add test code for three argument operands
@@ -123,14 +129,31 @@ impl Assembler {
                             ValueType::Register(r0) => match rhs {
                                 ValueType::Register(r1) => {
                                     //0x4RXY
+                                    // TODO: Not tested
+                                    let high = (0x4u8 << 4) | r0;
+                                    let low = r1;
+
+                                    eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
+                                    result.push(high);
+                                    result.push(low);
                                 }
                                 ValueType::Address(a) => {
                                     //0x1RXY
+                                    let high = (0x1u8 << 4) | r0;
+                                    let low = a;
+
+                                    eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
+                                    result.push(high);
+                                    result.push(low);
                                 }
                                 ValueType::Literal(l) => {
                                     //0x2RXY
-                                    let t = 0x2u8 & r0;
-                                    eprintln!("{:#04X?}", t);
+                                    let high = (0x2u8 << 4) | r0;
+                                    let low = l;
+
+                                    eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
+                                    result.push(high);
+                                    result.push(low);
                                 }
                                 ValueType::Label(l) => {
                                     // TODO: Fix this
@@ -139,8 +162,36 @@ impl Assembler {
                                     continue;
                                 }
                             },
-                            ValueType::Address(_) => {
+                            ValueType::Address(a) => {
                                 //0x3RXY
+                                let r = match rhs {
+                                    ValueType::Register(r) => {
+                                        let high = (0x3u8 << 4) | r;
+                                        let low = a;
+
+                                        eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
+                                        result.push(high);
+                                        result.push(low);
+                                    }
+                                    ValueType::Address(e) => {
+                                        // TODO: Fix this
+                                        let msg = format!("Cannot store address {} in memory", e);
+                                        println!("{}", msg);
+                                        continue;
+                                    }
+                                    ValueType::Literal(e) => {
+                                        // TODO: Fix this
+                                        let msg = format!("Cannot store literal {} in memory", e);
+                                        println!("{}", msg);
+                                        continue;
+                                    }
+                                    ValueType::Label(e) => {
+                                        // TODO: Fix this
+                                        let msg = format!("Cannot store label {} in memory", e);
+                                        println!("{}", msg);
+                                        continue;
+                                    }
+                                };
                             }
                             _ => {
                                 // TODO: Fix this
@@ -152,7 +203,7 @@ impl Assembler {
                     "halt" => {
                         result.push(0xC0);
                         result.push(0x00);
-                        eprintln!("Pushing 0xC000");
+                        eprintln!("Pushing 0xC0, 0x00");
                     }
                     _ => {
                         // TODO: Handle labels
