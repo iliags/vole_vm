@@ -6,48 +6,6 @@ use std::{collections::HashMap, result};
 #[derive(Debug, Default)]
 pub struct Assembler;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    //#[ignore]
-    fn test_compile() {
-        const TEST_RESULT: &[u8] = &[
-            0x20, 0x00, // Load 0x00 into r0
-            0x25, 0xFF, // Load 0xFF into r5
-            0x14, 0x44, // Load mem 0x44 into r4
-            0xB4, 0x0A, // If r4 == r0, jump to mem 0x0A (skip next line)
-            0x25, 0x01, // load 0x01 into r5
-            0x35, 0x46, // Store r5 into mem 0x46
-            0xC0, 0x00, // Quit
-        ];
-
-        // TODO: Add test code for three argument operands
-        const TEST_SOURCE: &str = "
-ld r0,0x00        ; Load 0x00 into r0
-LD R5, 0xFF        ; Load 0xFF into r5
-Ld r4, (0x44)      ; Load mem 0x44 into r4
-
-jp r4, continue    ; If r4 == r0, jump to continue
-lD r5, 0x01        ; Load 0x01 into r5
-
-continue:
-    ld (0x46), r5  ; Store r5 into mem 0x46
-    halt           ; Quit";
-
-        //println!("Input:\n{}\n", TEST_SOURCE);
-
-        let asm = Assembler::new();
-        let result = asm.assemble(TEST_SOURCE.to_string());
-
-        eprintln!("---------------------------");
-        eprintln!("Output:\n{:#04X?}", result);
-
-        assert_eq!(result, TEST_RESULT);
-    }
-}
-
 #[derive(Debug, PartialEq, Eq, Clone)]
 enum ValueType {
     Register(u8),
@@ -249,18 +207,18 @@ impl Assembler {
                         eprintln!("Label call address: {}", call_address);
                     }
                     unknown => {
-                        // TODO: Handle labels
                         if unknown.trim_end().ends_with(":") {
                             let label = unknown.trim_end_matches(":");
 
                             if labels.contains_key(label) {
                                 eprintln!("Labels");
 
-                                match labels.get_key_value(label) {
+                                // TODO: Check for unresolved labels
+                                match labels.remove_entry(label) {
                                     Some((k, call)) => {
                                         // The target jump address will be the next line
                                         let target = result.len() as u8;
-                                        result[*call as usize] = target;
+                                        result[call as usize] = target;
 
                                         eprintln!("Storing jump target {:#04X?}", target);
                                     }
@@ -393,5 +351,47 @@ impl Assembler {
     fn split_three_args(&self, args: &[&str]) -> (String, String, String) {
         // TODO
         ("a".to_string(), "b".to_string(), "c".to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    //#[ignore]
+    fn test_compile() {
+        const TEST_RESULT: &[u8] = &[
+            0x20, 0x00, // Load 0x00 into r0
+            0x25, 0xFF, // Load 0xFF into r5
+            0x14, 0x44, // Load mem 0x44 into r4
+            0xB4, 0x0A, // If r4 == r0, jump to mem 0x0A (skip next line)
+            0x25, 0x01, // load 0x01 into r5
+            0x35, 0x46, // Store r5 into mem 0x46
+            0xC0, 0x00, // Quit
+        ];
+
+        // TODO: Add test code for three argument operands
+        const TEST_SOURCE: &str = "
+ld r0,0x00        ; Load 0x00 into r0
+LD R5, 0xFF        ; Load 0xFF into r5
+Ld r4, (0x44)      ; Load mem 0x44 into r4
+
+jp r4, continue    ; If r4 == r0, jump to continue
+lD r5, 0x01        ; Load 0x01 into r5
+
+continue:
+    ld (0x46), r5  ; Store r5 into mem 0x46
+    halt           ; Quit";
+
+        //println!("Input:\n{}\n", TEST_SOURCE);
+
+        let asm = Assembler::new();
+        let result = asm.assemble(TEST_SOURCE.to_string());
+
+        eprintln!("---------------------------");
+        eprintln!("Output:\n{:#04X?}", result);
+
+        assert_eq!(result, TEST_RESULT);
     }
 }
