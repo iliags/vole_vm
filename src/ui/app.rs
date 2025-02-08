@@ -1,5 +1,6 @@
 use super::{cycle::CycleExecutionMode, numeric::NumericDisplay, rom::Rom, source::SourceEditMode};
 use crate::{
+    assembler::Assembler,
     ui::help,
     vole::{StartMode, Vole},
 };
@@ -101,21 +102,27 @@ pub struct VoleUI {
 
     #[serde(skip)]
     cycle_timer: f32,
+
+    #[serde(skip)]
+    assembler: Assembler,
+
+    #[serde(skip)]
+    compiled_source: Vec<u8>,
 }
 
 impl Default for VoleUI {
     fn default() -> Self {
         // TODO: Remove this
-        let mut new_rom = Rom::new();
-        new_rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
+        //let mut new_rom = Rom::new();
+        //new_rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
 
         Self {
             source_code: DEMO_SOURCE.to_owned(),
             source_edit_mode: SourceEditMode::Instruction,
             numeric_display: NumericDisplay::Hex,
             // TODO: Default
-            //rom: Rom::new(),
-            rom: new_rom,
+            rom: Rom::new(),
+            //rom: new_rom,
             execution_mode: CycleExecutionMode::FullSpeed,
             program_counter: 0,
             active_cell_index: None,
@@ -126,6 +133,8 @@ impl Default for VoleUI {
             show_export: false,
             show_help: false,
             cycle_timer: 0.0,
+            assembler: Assembler::new(),
+            compiled_source: Vec::new(),
         }
     }
 }
@@ -259,9 +268,16 @@ impl eframe::App for VoleUI {
                         });
 
                     if ui.button("Load Demo").clicked() {
-                        let rom: Vec<u8> = vec![0; 256];
-                        self.rom.bytes_mut().copy_from_slice(&rom);
-                        self.rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
+                        match self.source_edit_mode {
+                            SourceEditMode::Assembly => {
+                                self.source_code = DEMO_SOURCE.to_string();
+                            }
+                            _ => {
+                                self.rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
+                            }
+                        }
+                        //let rom: Vec<u8> = vec![0; 256];
+                        //self.rom.bytes_mut().copy_from_slice(&rom);
                     }
 
                     ui.separator();
@@ -482,8 +498,23 @@ impl eframe::App for VoleUI {
                                 });
 
                                 if ui.button("Compile").clicked() {
-                                    // TODO: Compile source code into bytes
+                                    // TODO: UI for errors
+                                    let result = self.assembler.assemble(self.source_code.clone());
+                                    //self.rom.store_asm(&result);
+                                    self.rom.bytes_mut()[0..result.len()].copy_from_slice(&result);
+                                    self.compiled_source = result;
                                 }
+                                ui.collapsing("Compiled Source", |ui| {
+                                    egui::ScrollArea::vertical().show(ui, |ui| {
+                                        ui.label("[");
+                                        for byte in self.compiled_source.iter() {
+                                            let number = self.numeric_display.byte_string(*byte);
+                                            let display_string = format!("  {},", number);
+                                            ui.label(display_string);
+                                        }
+                                        ui.label("]");
+                                    });
+                                });
                             }
 
                             #[cfg(not(debug_assertions))]
