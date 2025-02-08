@@ -484,38 +484,35 @@ impl eframe::App for VoleUI {
                                 });
                         }
                         SourceEditMode::Assembly => {
-                            #[cfg(debug_assertions)]
-                            {
-                                egui::ScrollArea::both().max_height(400.0).show(ui, |ui| {
-                                    CodeEditor::default()
-                                        .id_source("code editor")
-                                        .with_rows(12)
-                                        .with_fontsize(12.0)
-                                        .with_theme(ColorTheme::AYU_DARK)
-                                        .with_syntax(Syntax::vole())
-                                        .with_numlines(true)
-                                        .show(ui, &mut self.source_code);
-                                });
+                            egui::ScrollArea::both().max_height(400.0).show(ui, |ui| {
+                                CodeEditor::default()
+                                    .id_source("code editor")
+                                    .with_rows(12)
+                                    .with_fontsize(12.0)
+                                    .with_theme(ColorTheme::AYU_DARK)
+                                    .with_syntax(Syntax::vole())
+                                    .with_numlines(true)
+                                    .show(ui, &mut self.source_code);
+                            });
 
-                                if ui.button("Compile").clicked() {
-                                    // TODO: UI for errors
-                                    let result = self.assembler.assemble(self.source_code.clone());
-                                    //self.rom.store_asm(&result);
-                                    self.rom.bytes_mut()[0..result.len()].copy_from_slice(&result);
-                                    self.compiled_source = result;
-                                }
-                                ui.collapsing("Compiled Source", |ui| {
-                                    egui::ScrollArea::vertical().show(ui, |ui| {
-                                        ui.label("[");
-                                        for byte in self.compiled_source.iter() {
-                                            let number = self.numeric_display.byte_string(*byte);
-                                            let display_string = format!("  {},", number);
-                                            ui.label(display_string);
-                                        }
-                                        ui.label("]");
-                                    });
-                                });
+                            if ui.button("Compile").clicked() {
+                                // TODO: UI for errors
+                                let result = self.assembler.assemble(self.source_code.clone());
+                                //self.rom.store_asm(&result);
+                                self.rom.bytes_mut()[0..result.len()].copy_from_slice(&result);
+                                self.compiled_source = result;
                             }
+                            ui.collapsing("Compiled Source", |ui| {
+                                egui::ScrollArea::vertical().show(ui, |ui| {
+                                    ui.label("[");
+                                    for byte in self.compiled_source.iter() {
+                                        let number = self.numeric_display.byte_string(*byte);
+                                        let display_string = format!("  {},", number);
+                                        ui.label(display_string);
+                                    }
+                                    ui.label("]");
+                                });
+                            });
                         }
                     }
                     ui.separator();
