@@ -28,6 +28,11 @@ strum_macros = "0.26"
 
 regex = "1.11"
 
+# Localization
+fluent = "0.16"
+fluent-templates = "0.13"
+unic-langid = "0.9"
+
 # App persistence
 serde = { version = "1", features = ["derive"] }
 

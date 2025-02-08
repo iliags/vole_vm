@@ -8,11 +8,11 @@ pub enum CycleExecutionMode {
 }
 
 impl CycleExecutionMode {
-    pub const fn as_string(&self) -> &'static str {
+    pub const fn locale_key(&self) -> &'static str {
         match self {
-            CycleExecutionMode::FullSpeed => "Full Speed",
-            CycleExecutionMode::Timer(_) => "Timer",
-            CycleExecutionMode::Manual(_) => "Manual",
+            CycleExecutionMode::FullSpeed => "full_speed",
+            CycleExecutionMode::Timer(_) => "timer",
+            CycleExecutionMode::Manual(_) => "manual",
         }
     }
 }

@@ -11,5 +11,8 @@ pub mod assembler;
 mod ui;
 pub use ui::VoleUI;
 
+/// Localization
+mod localization;
+
 /// Storage key used for the app
 pub const APP_KEY: &str = "vole";
