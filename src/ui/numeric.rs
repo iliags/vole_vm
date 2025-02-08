@@ -7,11 +7,11 @@ pub enum NumericDisplay {
 }
 
 impl NumericDisplay {
-    /// Returns the locale key of the numeric display
-    pub const fn locale_key(&self) -> &'static str {
+    /// Returns the string of the numeric display
+    pub const fn as_string(&self) -> &'static str {
         match self {
-            NumericDisplay::Hex => "hex",
-            NumericDisplay::Binary => "binary",
+            NumericDisplay::Hex => "Hex",
+            NumericDisplay::Binary => "Binary",
         }
     }
 

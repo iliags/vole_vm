@@ -1,7 +1,6 @@
 use super::{cycle::CycleExecutionMode, numeric::NumericDisplay, rom::Rom, source::SourceEditMode};
 use crate::{
     assembler::Assembler,
-    localization::locale_text::LocaleText,
     ui::help,
     vole::{StartMode, Vole},
 };
@@ -93,9 +92,6 @@ pub struct VoleUI {
 
     #[serde(skip)]
     compiled_source: Vec<u8>,
-
-    #[serde(skip)]
-    language: LocaleText,
 }
 
 impl Default for VoleUI {
@@ -123,7 +119,6 @@ impl Default for VoleUI {
             cycle_timer: 0.0,
             assembler: Assembler::new(),
             compiled_source: Vec::new(),
-            language: LocaleText::default(),
         }
     }
 }
@@ -206,8 +201,7 @@ impl eframe::App for VoleUI {
 
                 let numeric = &mut self.numeric_display;
                 for numerics in NumericDisplay::iter() {
-                    let text = self.language.locale_string(numerics.locale_key());
-                    let response = ui.selectable_value(numeric, numerics, text);
+                    let response = ui.selectable_value(numeric, numerics, numerics.as_string());
 
                     if response.clicked() {
                         response.request_focus();
@@ -220,7 +214,7 @@ impl eframe::App for VoleUI {
                 {
                     ui.separator();
 
-                    ui.toggle_value(&mut self.show_help, self.language.locale_string("help"));
+                    ui.toggle_value(&mut self.show_help, "Help");
                 }
             });
         });
@@ -228,7 +222,7 @@ impl eframe::App for VoleUI {
         /*
             Help window
         */
-        egui::Window::new(self.language.locale_string("help"))
+        egui::Window::new("Help")
             .open(&mut self.show_help)
             .show(ctx, |ui| {
                 egui::ScrollArea::both().show(ui, |ui| {
@@ -526,19 +520,12 @@ impl eframe::App for VoleUI {
 
                     ui.separator();
 
-                    let current_mode_text = self
-                        .language
-                        .locale_string(self.execution_mode.locale_key());
                     let mode_box_response = egui::ComboBox::from_label("Execution Mode")
-                        .selected_text(current_mode_text)
+                        .selected_text(self.execution_mode.as_string())
                         .show_ui(ui, |ui| {
                             let exec_mode = &mut self.execution_mode;
                             for mode in CycleExecutionMode::iter() {
-                                ui.selectable_value(
-                                    exec_mode,
-                                    mode,
-                                    self.language.locale_string(mode.locale_key()),
-                                );
+                                ui.selectable_value(exec_mode, mode, mode.as_string());
                             }
                         })
                         .response;
