@@ -56,13 +56,6 @@ impl Assembler {
 
             match pre.to_lowercase().as_str() {
                 "ld" => {
-                    /*
-                    if parts.len() < 2 {
-                        // TODO: Fix this
-                        println!("Not enough arguments: {:?}", parts);
-                        continue;
-                    }*/
-
                     let (lhs, rhs) = self.split_two_args(&post);
                     eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
 
@@ -462,7 +455,6 @@ mod tests {
             0xC0, 0x00, // Quit
         ];
 
-        // TODO: Add test code for three argument operands
         const TEST_SOURCE: &str = "
 ld r0,0x00        ; Load 0x00 into r0
 LD R5, 0xFF        ; Load 0xFF into r5
@@ -486,36 +478,56 @@ continue:
 
     #[test]
     fn mnemonics() {
-        const TEST_RESULT: &[u8] = &[
+        // TODO: Add test code for three argument operands
+        const MNEMONIC_SOURCE: &str = "
+.org 0x01           ; Offset start by 1
+
+ld r0,0x00          ; Load 0x00 into r0
+ld r5, 0xFF         ; Load 0xFF into r5
+ld r4, (0x44)       ; Load mem 0x44 into r4
+
+jp r4, continue     ; If r4 == r0, jump to continue
+ld r5, 0x01         ; Load 0x01 into r5
+
+continue:
+    ld (0x46), r5   ; Store r5 into mem 0x46
+
+    ld r6, 0x01     ; Load 1 into r6
+    ld r7, 0x01     ; Load 1 into r7
+    adds r8, r6, r7 ; Add r6 and r7 as two's compliment, store in r8
+    addf r9, r6, r7 ; Add r6 and r7 as float, store in r9
+    or ra, r6, r7   ; OR r6 and r7 as float, store in ra
+    and rb, r6, r7  ; AND r6 and r7 as float, store in rb
+    xor rc, r6, r7  ; XOR r6 and r7 as float, store in rc
+    rot rd, 0x02    ; ROTATE rd to the right 2 times
+
+    halt           ; Quit";
+
+        const MNEMONIC_RESULT: &[u8] = &[
             0x20, 0x00, // Load 0x00 into r0
             0x25, 0xFF, // Load 0xFF into r5
             0x14, 0x44, // Load mem 0x44 into r4
             0xB4, 0x0A, // If r4 == r0, jump to mem 0x0A (skip next line)
             0x25, 0x01, // load 0x01 into r5
             0x35, 0x46, // Store r5 into mem 0x46
+            0x26, 0x01, // Load 1 into r6
+            0x27, 0x01, // Load 1 into r7
+            0x58, 0x67, // Add r6 and r7 as two's compliment, store in r8
+            0x69, 0x67, // Add r6 and r7 as float, store in r9
+            0x7A, 0x67, // OR r6 and r7 as float, store in ra
+            0x8B, 0x67, // AND r6 and r7 as float, store in rb
+            0x9C, 0x67, // XOR r6 and r7 as float, store in rc
+            0xAD, 0x02, // ROTATE rd to the right 2 times
             0xC0, 0x00, // Quit
         ];
 
-        // TODO: Add test code for three argument operands
-        const TEST_SOURCE: &str = "
-ld r0,0x00        ; Load 0x00 into r0
-LD R5, 0xFF        ; Load 0xFF into r5
-Ld r4, (0x44)      ; Load mem 0x44 into r4
-
-jp r4, continue    ; If r4 == r0, jump to continue
-lD r5, 0x01        ; Load 0x01 into r5
-
-continue:
-    ld (0x46), r5  ; Store r5 into mem 0x46
-    halt           ; Quit";
-
         let asm = Assembler::new();
-        let result = asm.assemble(TEST_SOURCE.to_string());
+        let result = asm.assemble(MNEMONIC_SOURCE.to_string());
 
         eprintln!("---------------------------");
         eprintln!("Output:\n{:#04X?}", result);
 
-        assert_eq!(result, TEST_RESULT);
+        assert_eq!(result, MNEMONIC_RESULT);
     }
 
     fn decimal_to_register_string(reg: usize) -> Result<String, String> {
