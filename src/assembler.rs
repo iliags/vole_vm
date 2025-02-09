@@ -304,6 +304,10 @@ impl Assembler {
                             0
                         }
                     };
+
+                    for _ in 0..program_counter {
+                        result.push(0x00);
+                    }
                 }
                 unknown => {
                     if unknown.trim_end().ends_with(":") {
@@ -658,10 +662,11 @@ continue:
     halt            ; Quit";
 
         const MNEMONIC_RESULT: &[u8] = &[
+            0x00, 0x00, // Offset by 2
             0x20, 0x00, // Load 0x00 into r0
             0x25, 0xFF, // Load 0xFF into r5
             0x14, 0x44, // Load mem 0x44 into r4
-            0xB4, 0x0A, // If r4 == r0, jump to mem 0x0A (skip next line)
+            0xB4, 0x0C, // If r4 == r0, jump to mem 0x0C (skip next line)
             0x25, 0x01, // load 0x01 into r5
             0x35, 0x46, // Store r5 into mem 0x46
             0x26, 0x01, // Load 1 into r6

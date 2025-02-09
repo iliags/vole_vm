@@ -482,7 +482,7 @@ impl eframe::App for VoleUI {
                             if ui.button("Compile").clicked() {
                                 // TODO: UI for errors
                                 let result = self.assembler.assemble(self.source_code.clone());
-                                let (r, pc) = match result {
+                                let (rom, pc) = match result {
                                     Ok(r) => (r.0, r.1),
                                     Err(e) => {
                                         // TODO: Push to UI
@@ -492,15 +492,6 @@ impl eframe::App for VoleUI {
                                     }
                                 };
 
-                                let rom: Vec<u8> = if pc > 0 {
-                                    let mut new_rom: Vec<u8> = vec![0; pc as usize];
-                                    for byte in r.iter() {
-                                        new_rom.push(*byte);
-                                    }
-                                    new_rom
-                                } else {
-                                    r
-                                };
                                 self.rom.set_bytes(&rom);
                                 self.compiled_source = rom;
                                 self.program_counter = pc;
