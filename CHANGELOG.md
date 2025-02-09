@@ -2,9 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.0.7 (WIP)
+
 ## 0.0.6
 
-- Fix bug in `jp` mnemonic when using `org`
+- Fix bug in `jp` mnemonic when using `.org`
 
 ## 0.0.5
 
