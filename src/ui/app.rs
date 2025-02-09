@@ -540,7 +540,8 @@ impl eframe::App for VoleUI {
                                     .clicked()
                                 {
                                     self.vole.load_rom(self.rom.bytes());
-                                    self.vole.start(StartMode::Reset);
+                                    self.vole
+                                        .start(StartMode::Reset, Some(self.program_counter));
                                     self.execution_mode = CycleExecutionMode::FullSpeed;
                                 }
                             }
@@ -551,7 +552,8 @@ impl eframe::App for VoleUI {
                                     .clicked()
                                 {
                                     self.vole.load_rom(self.rom.bytes());
-                                    self.vole.start(StartMode::Reset);
+                                    self.vole
+                                        .start(StartMode::Reset, Some(self.program_counter));
                                     //self.cycle_timer = limit;
                                 }
                                 let mut speed_limit = limit;
@@ -572,7 +574,8 @@ impl eframe::App for VoleUI {
                                     .clicked()
                                 {
                                     self.vole.load_rom(self.rom.bytes());
-                                    self.vole.start(StartMode::Reset);
+                                    self.vole
+                                        .start(StartMode::Reset, Some(self.program_counter));
                                     self.execution_mode = CycleExecutionMode::Manual(false);
                                 }
 
