@@ -102,18 +102,12 @@ pub struct VoleUI {
 
 impl Default for VoleUI {
     fn default() -> Self {
-        // TODO: Remove this
-        //let mut new_rom = Rom::new();
-        //new_rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
-
         Self {
             source_code: DEMO_SOURCE.to_owned(),
             source_edit_mode: SourceEditMode::Instruction,
             numeric_display: NumericDisplay::Hex,
-            // TODO: Default
             rom: Rom::new(),
-            //rom: new_rom,
-            execution_mode: CycleExecutionMode::FullSpeed,
+            execution_mode: CycleExecutionMode::Manual(false),
             program_counter: 0,
             active_cell_index: None,
             active_cell_string: "".to_owned(),
