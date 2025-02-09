@@ -10,6 +10,9 @@ build = "build.rs"
 [lints.rust]
 missing_docs = "warn"
 
+[lints.clippy]
+pedantic = "warn"
+
 [dependencies]
 egui = { version = "0.31", features = ["color-hex"] }
 eframe = { version = "0.31", default-features = false, features = [
