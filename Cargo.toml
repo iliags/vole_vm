@@ -23,8 +23,8 @@ egui_code_editor = { path = "crates/egui_code_editor" }
 log = "0.4"
 
 # Enum iterators
-strum = "0.26"
-strum_macros = "0.26"
+strum = "0.27"
+strum_macros = "0.27"
 
 regex = "1.11"
 
