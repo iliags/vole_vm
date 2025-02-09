@@ -340,6 +340,10 @@ impl Assembler {
             }
         }
 
+        if result.len() % 2 != 0 {
+            result.push(0x00);
+        }
+
         eprintln!("---------------------------");
         eprintln!("Assembler completed");
 
