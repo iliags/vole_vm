@@ -4,7 +4,7 @@ use crate::{
     ui::help,
     vole::{StartMode, Vole},
 };
-use egui::{scroll_area::ScrollBarVisibility, Vec2};
+use egui::{scroll_area::ScrollBarVisibility, Color32, Vec2};
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 use regex::Regex;
 use strum::IntoEnumIterator;
@@ -53,6 +53,10 @@ const DEMO_ROM: &[u8] = &[
 const HEX_STR: &str = "^(0x|0X)?[a-fA-F0-9]+$";
 const BINARY_STR: &str = "\\b(0b)?[01]+\\b";
 
+// TODO: Add color picker
+const COLOR_PC: Color32 = Color32::ORANGE;
+const COLOR_IR: Color32 = Color32::GREEN;
+
 // TODO: Add a container for marking elements to be highlighted or animated with a timer component
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -98,18 +102,12 @@ pub struct VoleUI {
 
 impl Default for VoleUI {
     fn default() -> Self {
-        // TODO: Remove this
-        //let mut new_rom = Rom::new();
-        //new_rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
-
         Self {
             source_code: DEMO_SOURCE.to_owned(),
             source_edit_mode: SourceEditMode::Instruction,
             numeric_display: NumericDisplay::Hex,
-            // TODO: Default
             rom: Rom::new(),
-            //rom: new_rom,
-            execution_mode: CycleExecutionMode::FullSpeed,
+            execution_mode: CycleExecutionMode::Manual(false),
             program_counter: 0,
             active_cell_index: None,
             active_cell_string: "".to_owned(),
@@ -663,7 +661,16 @@ impl eframe::App for VoleUI {
                         self.numeric_display
                             .byte_string(self.vole.program_counter())
                     );
-                    ui.label(pc_text);
+
+                    //ui.label(pc_text);
+
+                    let pc_color = if self.vole.running() {
+                        COLOR_PC
+                    } else {
+                        ui.style().visuals.text_color()
+                    };
+
+                    ui.label(egui::RichText::new(pc_text).color(pc_color));
                 });
                 ui.horizontal(|ui| {
                     let ir_text = format!(
@@ -671,7 +678,14 @@ impl eframe::App for VoleUI {
                         self.numeric_display
                             .instruction_string(self.vole.instruction_register())
                     );
-                    ui.label(ir_text);
+
+                    let ir_color = if self.vole.running() {
+                        COLOR_IR
+                    } else {
+                        ui.style().visuals.text_color()
+                    };
+
+                    ui.label(egui::RichText::new(ir_text).color(ir_color));
                 });
 
                 ui.label("");
@@ -754,28 +768,40 @@ impl eframe::App for VoleUI {
                             for (i, chunks) in self.vole.memory().chunks(chunk_size).enumerate() {
                                 for (r, chunk) in chunks.iter().enumerate() {
                                     ui.group(|ui| {
-                                        let memory_text = self
-                                            .numeric_display
-                                            .byte_string((r + (i * chunk_size)) as u8);
-                                        let label = ui.label(memory_text);
+                                        let is_running = self.vole.running();
+                                        let index = (r + (i * chunk_size)) as u8;
 
-                                        let mut memory = *chunk;
-
-                                        if self.numeric_display == NumericDisplay::Binary {
-                                            ui.add(
-                                                egui::DragValue::new(&mut memory)
-                                                    .binary(8, false)
-                                                    .prefix("0b"),
-                                            )
-                                            .labelled_by(label.id);
+                                        // Program counter coloring
+                                        let pc = self.vole.program_counter();
+                                        let cell_color = if is_running && index == pc {
+                                            COLOR_PC
                                         } else {
-                                            ui.add(
-                                                egui::DragValue::new(&mut memory)
-                                                    .hexadecimal(2, false, true)
-                                                    .prefix("0x"),
+                                            ui.style().visuals.text_color()
+                                        };
+                                        let label = ui.label(
+                                            egui::RichText::new(
+                                                self.numeric_display.byte_string(index),
                                             )
-                                            .labelled_by(label.id);
-                                        }
+                                            .color(cell_color),
+                                        );
+
+                                        // Index register coloring
+                                        let pc_1 = if (pc as u16 + 1) > 255 { 255 } else { pc + 1 };
+                                        let is_index_register = index == pc || index == pc_1;
+                                        let mem_color = if is_running && is_index_register {
+                                            COLOR_IR
+                                        } else {
+                                            ui.style().visuals.text_color()
+                                        };
+
+                                        // Memory cell text
+                                        ui.group(|ui| {
+                                            let text = egui::RichText::new(
+                                                self.numeric_display.byte_string(*chunk),
+                                            )
+                                            .color(mem_color);
+                                            ui.label(text).labelled_by(label.id);
+                                        });
                                     });
                                 }
 
