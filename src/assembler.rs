@@ -304,6 +304,10 @@ impl Assembler {
                             0
                         }
                     };
+
+                    for _ in 0..program_counter {
+                        result.push(0x00);
+                    }
                 }
                 unknown => {
                     if unknown.trim_end().ends_with(":") {
