@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## 0.0.5 (WIP)
 
+- Program counter starting value can be changed in the UI
+
 ## 0.0.4
 
 - Update cargo version
