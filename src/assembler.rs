@@ -285,7 +285,7 @@ impl Assembler {
                     eprintln!("Label call address: {}", call_address);
                 }
                 ".org" => {
-                    program_counter = match self.resolve_argument(&post) {
+                    program_counter = match self.resolve_argument(post) {
                         Ok(result) => {
                             match result {
                                 ValueType::Literal(v) => v,
@@ -305,9 +305,7 @@ impl Assembler {
                         }
                     };
 
-                    for _ in 0..program_counter {
-                        result.push(0x00);
-                    }
+                    result.resize(program_counter as usize, 0x00);
                 }
                 unknown => {
                     if unknown.trim_end().ends_with(":") {
