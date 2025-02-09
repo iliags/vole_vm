@@ -1,6 +1,6 @@
 [package]
 name = "vole_vm"
-version = "0.0.4"
+version = "0.0.5"
 authors = ["James Lennon"]
 edition = "2021"
 include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
@@ -23,8 +23,8 @@ egui_code_editor = { path = "crates/egui_code_editor" }
 log = "0.4"
 
 # Enum iterators
-strum = "0.26"
-strum_macros = "0.26"
+strum = "0.27"
+strum_macros = "0.27"
 
 regex = "1.11"
 

@@ -17,4 +17,8 @@ impl Rom {
     pub fn bytes_mut(&mut self) -> &mut [u8] {
         &mut self.bytes
     }
+
+    pub fn set_bytes(&mut self, bytes: &[u8]) {
+        self.bytes = bytes.to_vec();
+    }
 }
