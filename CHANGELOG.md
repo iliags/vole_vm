@@ -2,9 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.0.5 (WIP)
+## 0.0.5
 
 - Program counter starting value can be changed in the UI
+- `.org` mnemonic, offsets the program in memory when compiling.
 
 ## 0.0.4
 
