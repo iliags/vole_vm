@@ -1,6 +1,8 @@
 # TODO
 
 - Primary
+  - Terminate running emulator
+  - Restart emulator
   - Export
     - CSV
     - Markdown table
@@ -9,5 +11,6 @@
   - Add editor for presetting memory values
   - Fix instruction view display bug for odd value rom lengths
     - The code uses `chunk(2)`, but the odd value will cause the display to be off by one
+  - Program counter display is off by two
 - Wishlist
   - Replace user facing text with the `fluent` crate
