@@ -63,8 +63,10 @@ impl Vole {
         } else {
             // TODO: UI notification
             println!(
-                "The ROM is too large to fit into memory at the offset {:#X}",
-                offset
+                "The ROM {} is too large to fit into memory {} at the offset {:#X}",
+                rom.len(),
+                self.memory.len(),
+                offset,
             )
         }
     }

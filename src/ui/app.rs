@@ -9,7 +9,9 @@ use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 use regex::Regex;
 use strum::IntoEnumIterator;
 
-const DEMO_SOURCE: &str = "ld r0,0x00          ; Load 0x00 into r0
+const DEMO_SOURCE: &str = ".org 0x02           ; Offset start by 2
+
+ld r0,0x00          ; Load 0x00 into r0
 ld r5, 0xFF         ; Load 0xFF into r5
 ld r4, (0x44)       ; Load mem 0x44 into r4
 
@@ -260,8 +262,6 @@ impl eframe::App for VoleUI {
                                 self.rom.bytes_mut()[0..DEMO_ROM.len()].copy_from_slice(DEMO_ROM);
                             }
                         }
-                        //let rom: Vec<u8> = vec![0; 256];
-                        //self.rom.bytes_mut().copy_from_slice(&rom);
                     }
 
                     ui.separator();
@@ -482,9 +482,28 @@ impl eframe::App for VoleUI {
                             if ui.button("Compile").clicked() {
                                 // TODO: UI for errors
                                 let result = self.assembler.assemble(self.source_code.clone());
-                                //self.rom.store_asm(&result);
-                                self.rom.bytes_mut()[0..result.len()].copy_from_slice(&result);
-                                self.compiled_source = result;
+                                let (r, pc) = match result {
+                                    Ok(r) => (r.0, r.1),
+                                    Err(e) => {
+                                        // TODO: Push to UI
+                                        let msg = format!("Compilation errors {:?}", e);
+                                        println!("{}", msg);
+                                        (vec![0; 1], 0)
+                                    }
+                                };
+
+                                let rom: Vec<u8> = if pc > 0 {
+                                    let mut new_rom: Vec<u8> = vec![0; pc as usize];
+                                    for byte in r.iter() {
+                                        new_rom.push(*byte);
+                                    }
+                                    new_rom
+                                } else {
+                                    r
+                                };
+                                self.rom.set_bytes(&rom);
+                                self.compiled_source = rom;
+                                self.program_counter = pc;
                             }
                             ui.collapsing("Compiled Source", |ui| {
                                 egui::ScrollArea::vertical().show(ui, |ui| {
@@ -531,61 +550,56 @@ impl eframe::App for VoleUI {
                         .response;
                     mode_box_response.on_hover_text("How the emulator cycles execute");
 
-                    ui.group(|ui| {
-                        match self.execution_mode {
-                            CycleExecutionMode::FullSpeed => {
-                                if ui
-                                    .button("Run")
-                                    .on_hover_text("The CPU cycles around 60 times per second.")
-                                    .clicked()
-                                {
-                                    self.vole.load_rom(self.rom.bytes());
-                                    self.vole
-                                        .start(StartMode::Reset, Some(self.program_counter));
-                                    self.execution_mode = CycleExecutionMode::FullSpeed;
-                                }
+                    ui.group(|ui| match self.execution_mode {
+                        CycleExecutionMode::FullSpeed => {
+                            if ui
+                                .button("Run")
+                                .on_hover_text("The CPU cycles around 60 times per second.")
+                                .clicked()
+                            {
+                                self.vole.load_rom(self.rom.bytes());
+                                self.vole
+                                    .start(StartMode::Reset, Some(self.program_counter));
+                                self.execution_mode = CycleExecutionMode::FullSpeed;
                             }
-                            CycleExecutionMode::Timer(limit) => {
-                                if ui
-                                    .button("Run")
-                                    .on_hover_text("Executes the program at the execution speed.")
-                                    .clicked()
-                                {
-                                    self.vole.load_rom(self.rom.bytes());
-                                    self.vole
-                                        .start(StartMode::Reset, Some(self.program_counter));
-                                    //self.cycle_timer = limit;
-                                }
-                                let mut speed_limit = limit;
-                                ui.add(
-                                    egui::Slider::new(&mut speed_limit, 1.0..=10.0)
-                                        .step_by(0.5)
-                                        .text("Execution Speed"),
-                                )
-                                .on_hover_text(
-                                    "The number of seconds it takes to execute one cycle.",
-                                );
-                                self.execution_mode = CycleExecutionMode::Timer(speed_limit);
+                        }
+                        CycleExecutionMode::Timer(limit) => {
+                            if ui
+                                .button("Run")
+                                .on_hover_text("Executes the program at the execution speed.")
+                                .clicked()
+                            {
+                                self.vole.load_rom(self.rom.bytes());
+                                self.vole
+                                    .start(StartMode::Reset, Some(self.program_counter));
                             }
-                            CycleExecutionMode::Manual(_) => {
-                                if ui
-                                    .button("Run")
-                                    .on_hover_text("Each cycle needs to be manually advanced.")
-                                    .clicked()
-                                {
-                                    self.vole.load_rom(self.rom.bytes());
-                                    self.vole
-                                        .start(StartMode::Reset, Some(self.program_counter));
-                                    self.execution_mode = CycleExecutionMode::Manual(false);
-                                }
+                            let mut speed_limit = limit;
+                            ui.add(
+                                egui::Slider::new(&mut speed_limit, 1.0..=10.0)
+                                    .step_by(0.5)
+                                    .text("Execution Speed"),
+                            )
+                            .on_hover_text("The number of seconds it takes to execute one cycle.");
+                            self.execution_mode = CycleExecutionMode::Timer(speed_limit);
+                        }
+                        CycleExecutionMode::Manual(_) => {
+                            if ui
+                                .button("Run")
+                                .on_hover_text("Each cycle needs to be manually advanced.")
+                                .clicked()
+                            {
+                                self.vole.load_rom(self.rom.bytes());
+                                self.vole
+                                    .start(StartMode::Reset, Some(self.program_counter));
+                                self.execution_mode = CycleExecutionMode::Manual(false);
+                            }
 
-                                if ui
-                                    .button("Next Cycle")
-                                    .on_hover_text("Execute Next Cycle")
-                                    .clicked()
-                                {
-                                    self.execution_mode = CycleExecutionMode::Manual(true);
-                                }
+                            if ui
+                                .button("Next Cycle")
+                                .on_hover_text("Execute Next Cycle")
+                                .clicked()
+                            {
+                                self.execution_mode = CycleExecutionMode::Manual(true);
                             }
                         }
                     });

@@ -18,8 +18,8 @@ impl Assembler {
 
     // TODO: Add .org
     // TODO: Add line numbers to errors
-    // TODO: Change return type to Result<(Vec<u8>, u8), Vec<ErrorType>>
-    pub fn assemble(&self, source_code: String) -> Vec<u8> {
+    // TODO: Error type instead of Vec<string>
+    pub fn assemble(&self, source_code: String) -> Result<(Vec<u8>, u8), Vec<String>> {
         let mut result = Vec::new();
         // <Label, Calling Address>
         let mut labels: HashMap<String, u8> = HashMap::new();
@@ -27,6 +27,8 @@ impl Assembler {
         let lines: Vec<&str> = source_code.split_terminator("\n").collect();
         eprintln!("---------------------------");
         eprintln!("Line count: {}", lines.len());
+
+        let mut program_counter = 0u8;
 
         // TODO: Return errors with line numbers
         for (line_num, line) in lines.iter().enumerate() {
@@ -282,6 +284,27 @@ impl Assembler {
                     labels.insert(rhs, call_address as u8);
                     eprintln!("Label call address: {}", call_address);
                 }
+                ".org" => {
+                    program_counter = match self.resolve_argument(&post) {
+                        Ok(result) => {
+                            match result {
+                                ValueType::Literal(v) => v,
+                                e => {
+                                    // TODO: Fix this
+                                    let msg = format!("Error resoloving argument {:?}", e);
+                                    println!("{}", msg);
+                                    0
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            // TODO: Fix this
+                            let msg = format!("Error resoloving argument {}", e);
+                            println!("{}", msg);
+                            0
+                        }
+                    };
+                }
                 unknown => {
                     if unknown.trim_end().ends_with(":") {
                         let label = unknown.trim_end_matches(":");
@@ -316,7 +339,7 @@ impl Assembler {
         eprintln!("---------------------------");
         eprintln!("Assembler completed");
 
-        result
+        Ok((result, program_counter))
     }
 
     fn resolve_argument(&self, arg: &str) -> Result<ValueType, String> {
@@ -496,10 +519,12 @@ mod tests {
         let asm = Assembler::new();
 
         let l1 = "ld r0, 0x01".to_owned();
-        assert_eq!(asm.assemble(l1), [0x20, 0x01]);
+        let result = asm.assemble(l1).expect("Invalid assembler output");
+        assert_eq!(result.0, [0x20, 0x01]);
 
         let l2 = "ld r0, 0b00000001".to_owned();
-        assert_eq!(asm.assemble(l2), [0x20, 0x01]);
+        let result = asm.assemble(l2).expect("Invalid assembler output");
+        assert_eq!(result.0, [0x20, 0x01]);
     }
 
     #[test]
@@ -528,7 +553,8 @@ mod tests {
         }
 
         // TODO: Actually compare values
-        assert_eq!(asm.assemble(program).len(), 32);
+        let result = asm.assemble(program).expect("Invalid assembler output");
+        assert_eq!(result.0.len(), 32);
     }
 
     #[test]
@@ -598,15 +624,17 @@ continue:
     halt           ; Quit";
 
         let asm = Assembler::new();
-        let result = asm.assemble(TEST_SOURCE.to_string());
+        let result = asm
+            .assemble(TEST_SOURCE.to_string())
+            .expect("Invalid assembler output");
 
-        assert_eq!(result, TEST_RESULT);
+        assert_eq!(result.0, TEST_RESULT);
     }
 
     #[test]
     fn mnemonics() {
         const MNEMONIC_SOURCE: &str = "
-.org 0x01           ; Offset start by 1
+.org 0x02           ; Offset start by 2
 
 ld r0,0x00          ; Load 0x00 into r0
 ld r5, 0xFF         ; Load 0xFF into r5
@@ -648,9 +676,11 @@ continue:
         ];
 
         let asm = Assembler::new();
-        let result = asm.assemble(MNEMONIC_SOURCE.to_string());
+        let result = asm
+            .assemble(MNEMONIC_SOURCE.to_string())
+            .expect("Invalid assembler output");
 
-        assert_eq!(result, MNEMONIC_RESULT);
+        assert_eq!(result.0, MNEMONIC_RESULT);
     }
 
     fn decimal_to_register_string(reg: usize) -> Result<String, String> {
