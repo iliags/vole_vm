@@ -14,7 +14,7 @@ pub enum SourceEditMode {
 }
 
 impl SourceEditMode {
-    pub const fn as_string(&self) -> &'static str {
+    pub const fn to_string(self) -> &'static str {
         match self {
             SourceEditMode::Byte => "Byte",
             SourceEditMode::Instruction => "Instruction",

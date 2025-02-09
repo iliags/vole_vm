@@ -8,7 +8,7 @@ pub enum CycleExecutionMode {
 }
 
 impl CycleExecutionMode {
-    pub const fn as_string(&self) -> &'static str {
+    pub const fn as_string(self) -> &'static str {
         match self {
             CycleExecutionMode::FullSpeed => "Full Speed",
             CycleExecutionMode::Timer(_) => "Timer",

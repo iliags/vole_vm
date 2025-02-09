@@ -243,11 +243,11 @@ impl eframe::App for VoleUI {
                     ui.heading("Program Source Code");
                     // Source edit mode selection
                     egui::ComboBox::from_label("Edit Mode")
-                        .selected_text(self.source_edit_mode.as_string())
+                        .selected_text(self.source_edit_mode.to_string())
                         .show_ui(ui, |ui| {
                             let edit_mode = &mut self.source_edit_mode;
                             for mode in SourceEditMode::iter() {
-                                ui.selectable_value(edit_mode, mode, mode.as_string());
+                                ui.selectable_value(edit_mode, mode, mode.to_string());
                             }
                         });
 
@@ -548,7 +548,7 @@ impl eframe::App for VoleUI {
                             {
                                 self.vole.load_rom(self.rom.bytes());
                                 self.vole
-                                    .start(StartMode::Reset, Some(self.program_counter));
+                                    .start(&StartMode::Reset, Some(self.program_counter));
                                 self.execution_mode = CycleExecutionMode::FullSpeed;
                             }
                         }
@@ -560,7 +560,7 @@ impl eframe::App for VoleUI {
                             {
                                 self.vole.load_rom(self.rom.bytes());
                                 self.vole
-                                    .start(StartMode::Reset, Some(self.program_counter));
+                                    .start(&StartMode::Reset, Some(self.program_counter));
                             }
                             let mut speed_limit = limit;
                             ui.add(
@@ -579,7 +579,7 @@ impl eframe::App for VoleUI {
                             {
                                 self.vole.load_rom(self.rom.bytes());
                                 self.vole
-                                    .start(StartMode::Reset, Some(self.program_counter));
+                                    .start(&StartMode::Reset, Some(self.program_counter));
                                 self.execution_mode = CycleExecutionMode::Manual(false);
                             }
 

@@ -375,7 +375,7 @@ impl Assembler {
                 }
             }
         } else if val.starts_with("(") || val.ends_with(")") {
-            return Err(format!("Malformed memory address: {}", val));
+            return Err(format!("Malformed memory address: {val}"));
         }
 
         if val.starts_with("0x") || val.starts_with("0b") {
@@ -543,18 +543,18 @@ mod tests {
             let reg = match decimal_to_register_string(i) {
                 Ok(r) => r,
                 Err(e) => {
-                    eprintln!("Invalid register {}", e);
+                    eprintln!("Invalid register {e}");
                     "r0".to_owned()
                 }
             };
 
             let value = rng.random::<u8>();
             let value = if rng.random_bool(0.5) {
-                format!("{:#04X?}", value)
+                format!("{value:#04X?}")
             } else {
-                format!("{:#010b}", value)
+                format!("{value:#010b}")
             };
-            let inst = format!("ld {}, {}\n", reg, value);
+            let inst = format!("ld {reg}, {value}\n");
             program.push_str(&inst);
         }
 
@@ -584,22 +584,22 @@ mod tests {
     fn split_args_three() {
         let asm = Assembler::new();
 
-        let (l, m, r) = asm.split_three_args(&"a,b,c");
+        let (l, m, r) = asm.split_three_args("a,b,c");
         assert_eq!(l, "a");
         assert_eq!(m, "b");
         assert_eq!(r, "c");
 
-        let (l, m, r) = asm.split_three_args(&"a, b, c");
+        let (l, m, r) = asm.split_three_args("a, b, c");
         assert_eq!(l, "a");
         assert_eq!(m, "b");
         assert_eq!(r, "c");
 
-        let (l, m, r) = asm.split_three_args(&"a, b,c");
+        let (l, m, r) = asm.split_three_args("a, b,c");
         assert_eq!(l, "a");
         assert_eq!(m, "b");
         assert_eq!(r, "c");
 
-        let (l, m, r) = asm.split_three_args(&"a,b, c");
+        let (l, m, r) = asm.split_three_args("a,b, c");
         assert_eq!(l, "a");
         assert_eq!(m, "b");
         assert_eq!(r, "c");
@@ -708,7 +708,7 @@ continue:
             0xD => Ok("rd".to_owned()),
             0xE => Ok("re".to_owned()),
             0xF => Ok("rf".to_owned()),
-            _ => Err(format!("Invalid register {}", reg)),
+            _ => Err(format!("Invalid register {reg}")),
         }
     }
 }

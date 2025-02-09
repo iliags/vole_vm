@@ -67,13 +67,13 @@ impl Vole {
                 rom.len(),
                 self.memory.len(),
                 offset,
-            )
+            );
         }
     }
 
     /// Start the machine
-    pub fn start(&mut self, start_mode: StartMode, start_location: Option<u8>) {
-        if start_mode == StartMode::Reset {
+    pub fn start(&mut self, start_mode: &StartMode, start_location: Option<u8>) {
+        if *start_mode == StartMode::Reset {
             self.reset_cpu();
         }
         self.set_program_counter(start_location.unwrap_or(0x00));
@@ -310,13 +310,13 @@ mod tests {
         }
         let random_registers = random_registers;
 
-        device.start(StartMode::KeepState, Some(device.program_counter()));
+        device.start(&StartMode::KeepState, Some(device.program_counter()));
         assert!(rom_length > 0);
         assert_eq!(rom, device.memory()[0..rom_length]);
         assert_eq!(device.registers(), random_registers);
         assert_eq!(device.program_counter(), random_pc);
 
-        device.start(StartMode::Reset, None);
+        device.start(&StartMode::Reset, None);
         assert!(rom_length > 0);
         assert_eq!(rom, device.memory()[0..rom_length]);
         assert_ne!(device.registers(), random_registers);
@@ -330,7 +330,7 @@ mod tests {
 
         let empty_rom = [0x0000];
         device.load_rom(&empty_rom);
-        device.start(StartMode::Reset, None);
+        device.start(&StartMode::Reset, None);
 
         let result = device.cycle().unwrap_err();
         assert_eq!(result, CycleError::InvalidOpcode("0x0000".to_string()));

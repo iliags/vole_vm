@@ -11,7 +11,7 @@ build = "build.rs"
 missing_docs = "warn"
 
 [lints.clippy]
-pedantic = "warn"
+#pedantic = "warn"
 
 [dependencies]
 egui = { version = "0.31", features = ["color-hex"] }
