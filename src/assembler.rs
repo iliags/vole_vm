@@ -12,6 +12,7 @@ enum ValueType {
 }
 
 impl Assembler {
+    #[must_use]
     pub fn new() -> Self {
         Self {}
     }
@@ -53,10 +54,10 @@ impl Assembler {
 
             match pre.to_lowercase().as_str() {
                 "ld" => {
-                    let (lhs, rhs) = self.split_two_args(post);
+                    let (lhs, rhs) = split_two_args(post);
                     eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
 
-                    let lhs = match self.resolve_argument(&lhs) {
+                    let lhs = match resolve_argument(&lhs) {
                         Ok(v) => v,
                         Err(e) => {
                             // TODO: Fix this
@@ -64,7 +65,7 @@ impl Assembler {
                             ValueType::Literal(0x00)
                         }
                     };
-                    let rhs = match self.resolve_argument(&rhs) {
+                    let rhs = match resolve_argument(&rhs) {
                         Ok(v) => v,
                         Err(e) => {
                             // TODO: Fix this
@@ -201,10 +202,10 @@ impl Assembler {
                 "rot" => {
                     // TODO: Not tested
                     //0xAR0X
-                    let (lhs, rhs) = self.split_two_args(post);
+                    let (lhs, rhs) = split_two_args(post);
                     eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
 
-                    let lhs = match self.resolve_argument(&lhs) {
+                    let lhs = match resolve_argument(&lhs) {
                         Ok(v) => match v {
                             ValueType::Register(r) => r,
                             other => {
@@ -219,7 +220,7 @@ impl Assembler {
                             0x00
                         }
                     };
-                    let rhs = match self.resolve_argument(&rhs) {
+                    let rhs = match resolve_argument(&rhs) {
                         Ok(v) => match v {
                             ValueType::Literal(l) => l,
                             other => {
@@ -252,10 +253,10 @@ impl Assembler {
                     // TODO: Handle labels
                     // TODO: Add support for multiple jump instructions to the same label
                     //0xBRXY
-                    let (lhs, rhs) = self.split_two_args(post);
+                    let (lhs, rhs) = split_two_args(post);
                     eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
 
-                    let lhs = match self.resolve_argument(&lhs) {
+                    let lhs = match resolve_argument(&lhs) {
                         Ok(v) => match v {
                             ValueType::Register(r) => r,
                             other => {
@@ -285,7 +286,7 @@ impl Assembler {
                     eprintln!("Label call address: {}", call_address);
                 }
                 ".org" => {
-                    program_counter = match self.resolve_argument(post) {
+                    program_counter = match resolve_argument(post) {
                         Ok(result) => {
                             match result {
                                 ValueType::Literal(v) => v,
@@ -348,171 +349,171 @@ impl Assembler {
         Ok((result, program_counter))
     }
 
-    fn resolve_argument(&self, arg: &str) -> Result<ValueType, String> {
-        let val = arg.to_lowercase();
-        if val.starts_with("r") {
-            // Register
-            match self.register_to_value(val.as_str()) {
-                Ok(v) => {
-                    return Ok(ValueType::Register(v));
-                }
-                Err(e) => {
-                    // TODO: Fix this
-                    println!("Fix this: {}", e);
-                }
-            }
-        }
-
-        if val.starts_with("(") && val.ends_with(")") {
-            // Memory address
-            match self.numeric_to_value(val.as_str()) {
-                Ok(v) => {
-                    return Ok(ValueType::Address(v));
-                }
-                Err(e) => {
-                    // TODO: Fix this
-                    println!("Fix this: {}", e);
-                }
-            }
-        } else if val.starts_with("(") || val.ends_with(")") {
-            return Err(format!("Malformed memory address: {val}"));
-        }
-
-        if val.starts_with("0x") || val.starts_with("0b") {
-            // Literal
-            match self.numeric_to_value(val.as_str()) {
-                Ok(v) => {
-                    return Ok(ValueType::Literal(v));
-                }
-                Err(e) => {
-                    // TODO: Fix this
-                    println!("Fix this: {}", e);
-                }
-            }
-        }
-
-        if val.trim_end().ends_with(":") {
-            return Ok(ValueType::Label(val.trim_end_matches(":").to_string()));
-        }
-
-        //TODO: labels
-        Ok(ValueType::Literal(0x0))
-    }
-
-    fn register_to_value(&self, reg: &str) -> Result<u8, String> {
-        match reg {
-            "r0" => Ok(0x0),
-            "r2" => Ok(0x2),
-            "r1" => Ok(0x1),
-            "r3" => Ok(0x3),
-            "r4" => Ok(0x4),
-            "r5" => Ok(0x5),
-            "r6" => Ok(0x6),
-            "r7" => Ok(0x7),
-            "r8" => Ok(0x8),
-            "r9" => Ok(0x9),
-            "ra" => Ok(0xA),
-            "rb" => Ok(0xB),
-            "rc" => Ok(0xC),
-            "rd" => Ok(0xD),
-            "re" => Ok(0xE),
-            "rf" => Ok(0xF),
-            _ => Err(format!("Invalid register {}", reg)),
-        }
-    }
-
-    fn numeric_to_value(&self, num: &str) -> Result<u8, String> {
-        let value = num.trim_start_matches("(").trim_end_matches(")");
-
-        let radix = if value.starts_with("0x") {
-            16
-        } else if value.starts_with("0b") {
-            2
-        } else {
-            return Err(format!("Malformed number: {}", num));
-        };
-
-        let prefix = if value.starts_with("0x") {
-            "0x"
-        } else if value.starts_with("0b") {
-            "0b"
-        } else {
-            return Err(format!("Malformed number: {}", num));
-        };
-
-        let value = value.strip_prefix(prefix).unwrap_or(value);
-        let value = u8::from_str_radix(value, radix).unwrap_or_default();
-
-        Ok(value)
-    }
-
-    fn split_two_args(&self, args: &str) -> (String, String) {
-        let result: Vec<&str> = args.split(",").flat_map(|s| s.split(", ")).collect();
-        (result[0].trim().to_string(), result[1].trim().to_string())
-    }
-
-    fn split_three_args(&self, args: &str) -> (String, String, String) {
-        let result: Vec<&str> = args.split(",").flat_map(|s| s.split(", ")).collect();
-        (
-            result[0].trim().to_string(),
-            result[1].trim().to_string(),
-            result[2].trim().to_string(),
-        )
-    }
-
     fn resolve_rst(&self, arg: &str) -> (u8, u8, u8) {
-        let (r, s, t) = self.split_three_args(arg);
+        let (r, s, t) = split_three_args(arg);
 
-        let r = match self.resolve_argument(&r) {
+        let r = match resolve_argument(&r) {
             Ok(v) => match v {
                 ValueType::Register(v) => v,
-                e => {
+                error => {
                     // TODO: Fix this
-                    println!("Fix this: {:?}", e);
+                    println!("Fix this: {error:?}");
                     0x00
                 }
             },
             Err(e) => {
                 // TODO: Fix this
-                println!("Fix this: {:?}", e);
+                println!("Fix this: {e:?}");
                 0x00
             }
         };
 
-        let s = match self.resolve_argument(&s) {
+        let s = match resolve_argument(&s) {
             Ok(v) => match v {
                 ValueType::Register(v) => v,
-                e => {
+                error => {
                     // TODO: Fix this
-                    println!("Fix this: {:?}", e);
+                    println!("Fix this: {error:?}");
                     0x00
                 }
             },
             Err(e) => {
                 // TODO: Fix this
-                println!("Fix this: {:?}", e);
+                println!("Fix this: {e:?}");
                 0x00
             }
         };
 
-        let t = match self.resolve_argument(&t) {
+        let t = match resolve_argument(&t) {
             Ok(v) => match v {
                 ValueType::Register(v) => v,
-                e => {
+                error => {
                     // TODO: Fix this
-                    println!("Fix this: {:?}", e);
+                    println!("Fix this: {error:?}");
                     0x00
                 }
             },
             Err(e) => {
                 // TODO: Fix this
-                println!("Fix this: {:?}", e);
+                println!("Fix this: {e:?}");
                 0x00
             }
         };
 
         (r, s, t)
     }
+}
+
+fn register_to_value(reg: &str) -> Result<u8, String> {
+    match reg {
+        "r0" => Ok(0x0),
+        "r2" => Ok(0x2),
+        "r1" => Ok(0x1),
+        "r3" => Ok(0x3),
+        "r4" => Ok(0x4),
+        "r5" => Ok(0x5),
+        "r6" => Ok(0x6),
+        "r7" => Ok(0x7),
+        "r8" => Ok(0x8),
+        "r9" => Ok(0x9),
+        "ra" => Ok(0xA),
+        "rb" => Ok(0xB),
+        "rc" => Ok(0xC),
+        "rd" => Ok(0xD),
+        "re" => Ok(0xE),
+        "rf" => Ok(0xF),
+        _ => Err(format!("Invalid register {reg}")),
+    }
+}
+
+fn numeric_to_value(num: &str) -> Result<u8, String> {
+    let value = num.trim_start_matches('(').trim_end_matches(')');
+
+    let radix = if value.starts_with("0x") {
+        16
+    } else if value.starts_with("0b") {
+        2
+    } else {
+        return Err(format!("Malformed number: {num}"));
+    };
+
+    let prefix = if value.starts_with("0x") {
+        "0x"
+    } else if value.starts_with("0b") {
+        "0b"
+    } else {
+        return Err(format!("Malformed number: {num}"));
+    };
+
+    let value = value.strip_prefix(prefix).unwrap_or(value);
+    let value = u8::from_str_radix(value, radix).unwrap_or_default();
+
+    Ok(value)
+}
+
+fn split_two_args(args: &str) -> (String, String) {
+    let result: Vec<&str> = args.split(',').flat_map(|s| s.split(", ")).collect();
+    (result[0].trim().to_string(), result[1].trim().to_string())
+}
+
+fn split_three_args(args: &str) -> (String, String, String) {
+    let result: Vec<&str> = args.split(',').flat_map(|s| s.split(", ")).collect();
+    (
+        result[0].trim().to_string(),
+        result[1].trim().to_string(),
+        result[2].trim().to_string(),
+    )
+}
+
+fn resolve_argument(arg: &str) -> Result<ValueType, String> {
+    let val = arg.to_lowercase();
+    if val.starts_with('r') {
+        // Register
+        match register_to_value(val.as_str()) {
+            Ok(v) => {
+                return Ok(ValueType::Register(v));
+            }
+            Err(e) => {
+                // TODO: Fix this
+                println!("Fix this: {e}");
+            }
+        }
+    }
+
+    if val.starts_with('(') && val.ends_with(')') {
+        // Memory address
+        match numeric_to_value(val.as_str()) {
+            Ok(v) => {
+                return Ok(ValueType::Address(v));
+            }
+            Err(e) => {
+                // TODO: Fix this
+                println!("Fix this: {e}");
+            }
+        }
+    } else if val.starts_with('(') || val.ends_with(')') {
+        return Err(format!("Malformed memory address: {val}"));
+    }
+
+    if val.starts_with("0x") || val.starts_with("0b") {
+        // Literal
+        match numeric_to_value(val.as_str()) {
+            Ok(v) => {
+                return Ok(ValueType::Literal(v));
+            }
+            Err(e) => {
+                // TODO: Fix this
+                println!("Fix this: {e}");
+            }
+        }
+    }
+
+    if val.trim_end().ends_with(':') {
+        return Ok(ValueType::Label(val.trim_end_matches(':').to_string()));
+    }
+
+    //TODO: labels
+    Ok(ValueType::Literal(0x0))
 }
 
 #[cfg(test)]
@@ -540,7 +541,7 @@ mod tests {
 
         let mut program = String::new();
         for i in 0..16 {
-            let reg = match decimal_to_register_string(i) {
+            let register = match decimal_to_register_string(i) {
                 Ok(r) => r,
                 Err(e) => {
                     eprintln!("Invalid register {e}");
@@ -554,7 +555,7 @@ mod tests {
             } else {
                 format!("{value:#010b}")
             };
-            let inst = format!("ld {reg}, {value}\n");
+            let inst = format!("ld {register}, {value}\n");
             program.push_str(&inst);
         }
 
@@ -565,41 +566,37 @@ mod tests {
 
     #[test]
     fn split_args_two() {
-        let asm = Assembler::new();
-
-        let (l, r) = asm.split_two_args(&"a,b");
+        let (l, r) = split_two_args("a,b");
         assert_eq!(l, "a");
         assert_eq!(r, "b");
 
-        let (l, r) = asm.split_two_args("a, b");
+        let (l, r) = split_two_args("a, b");
         assert_eq!(l, "a");
         assert_eq!(r, "b");
 
-        let (l, r) = asm.split_two_args("a , b");
+        let (l, r) = split_two_args("a , b");
         assert_eq!(l, "a");
         assert_eq!(r, "b");
     }
 
     #[test]
     fn split_args_three() {
-        let asm = Assembler::new();
-
-        let (l, m, r) = asm.split_three_args("a,b,c");
+        let (l, m, r) = split_three_args("a,b,c");
         assert_eq!(l, "a");
         assert_eq!(m, "b");
         assert_eq!(r, "c");
 
-        let (l, m, r) = asm.split_three_args("a, b, c");
+        let (l, m, r) = split_three_args("a, b, c");
         assert_eq!(l, "a");
         assert_eq!(m, "b");
         assert_eq!(r, "c");
 
-        let (l, m, r) = asm.split_three_args("a, b,c");
+        let (l, m, r) = split_three_args("a, b,c");
         assert_eq!(l, "a");
         assert_eq!(m, "b");
         assert_eq!(r, "c");
 
-        let (l, m, r) = asm.split_three_args("a,b, c");
+        let (l, m, r) = split_three_args("a,b, c");
         assert_eq!(l, "a");
         assert_eq!(m, "b");
         assert_eq!(r, "c");

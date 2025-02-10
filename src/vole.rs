@@ -1,3 +1,10 @@
+// Occurs in 0x6000
+#![allow(clippy::cast_possible_truncation)]
+// Occurs in opcode 0x5000
+#![allow(clippy::cast_possible_wrap)]
+// Occurs in opcode 0x5000 and test
+#![allow(clippy::cast_sign_loss)]
+
 /// Vole virtual machine representation
 pub struct Vole {
     memory: Vec<u8>,
@@ -22,8 +29,10 @@ pub enum StartMode {
     KeepState,
 }
 
+/// Errors which occur when a cycle is performed
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CycleError {
+    /// Invalid opcode is found
     InvalidOpcode(String),
 }
 
@@ -41,6 +50,7 @@ impl Default for Vole {
 
 impl Vole {
     /// Create a new machine instance
+    #[must_use]
     pub fn new() -> Self {
         Self {
             ..Default::default()
@@ -81,6 +91,7 @@ impl Vole {
     }
 
     /// Is the machine running
+    #[must_use]
     pub fn running(&self) -> bool {
         self.running
     }
@@ -96,6 +107,7 @@ impl Vole {
     }
 
     /// Returns the memory cells
+    #[must_use]
     pub fn memory(&self) -> &[u8] {
         &self.memory
     }
@@ -108,6 +120,7 @@ impl Vole {
     }
 
     /// Get the registers
+    #[must_use]
     pub fn registers(&self) -> &[u8] {
         &self.registers
     }
@@ -123,6 +136,7 @@ impl Vole {
     }
 
     /// Returns the program counter
+    #[must_use]
     pub fn program_counter(&self) -> u8 {
         self.pc
     }
@@ -133,18 +147,23 @@ impl Vole {
     }
 
     /// Returns the instruction register
+    #[must_use]
     pub fn instruction_register(&self) -> u16 {
         self.ir
     }
 
     /// Perform a fetch-decode-execute cycle
+    /// # Errors
+    ///
+    /// Will return `CycleError` if a problem occurs during
+    /// a cycle.
     pub fn cycle(&mut self) -> Result<(), CycleError> {
         // TODO: Execution trace
         /*
            Fetch
         */
-        self.ir = ((self.memory[self.pc as usize] as u16) << 8)
-            | (self.memory[(self.pc + 1) as usize]) as u16;
+        self.ir = (u16::from(self.memory[self.pc as usize]) << 8)
+            | u16::from(self.memory[(self.pc + 1) as usize]);
 
         //println!("{:#x}", self.ir);
 
@@ -193,8 +212,9 @@ impl Vole {
                 // TODO: Implement the FP operation as described in the book
 
                 // Add register S and register T as floating point, store result in R
-                self.registers[r as usize] =
-                    (self.registers[s as usize] as f32 + self.registers[t as usize] as f32) as u8;
+                self.registers[r as usize] = (f32::from(self.registers[s as usize])
+                    + f32::from(self.registers[t as usize]))
+                    as u8;
             }
             0x7000 => {
                 // OR register S and register T, store result in R
@@ -213,7 +233,7 @@ impl Vole {
             }
             0xA000 => {
                 // Rotate bit pattern in register R to the right X (t) times
-                self.registers[r as usize] = self.registers[r as usize].rotate_right(t as u32);
+                self.registers[r as usize] = self.registers[r as usize].rotate_right(u32::from(t));
             }
             0xB000 => {
                 // Jump to the instruction at memory XY if register R equals register 0
