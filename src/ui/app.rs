@@ -1,6 +1,6 @@
 use super::{cycle::CycleExecutionMode, numeric::NumericDisplay, rom::Rom, source::SourceEditMode};
 use crate::{
-    assembler::{Assembler, AssemblerError},
+    asm::{assembler::Assembler, AssemblerError},
     ui::help,
     vole::{StartMode, Vole},
 };

@@ -5,7 +5,7 @@
 pub mod vole;
 
 /// Simple assembler
-pub mod assembler;
+pub mod asm;
 
 /// UI
 mod ui;

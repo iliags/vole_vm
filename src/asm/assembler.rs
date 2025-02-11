@@ -1,8 +1,13 @@
+use crate::asm::asm_result::AssemblerResult;
+
+use super::AssemblerError;
 use std::collections::HashMap;
-use thiserror::Error;
 
 #[derive(Debug, Default)]
-pub struct Assembler;
+pub struct Assembler {
+    log: String,
+    line_number: usize,
+}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 enum ValueType {
@@ -12,58 +17,40 @@ enum ValueType {
     Label(String),
 }
 
-#[derive(Error, Debug)]
-pub enum AssemblerError {
-    #[error("Malformed memory address '{1}' at line {0}")]
-    MalformedAddress(usize, String),
-
-    #[error("Unknown register '{1}' at line {0}")]
-    UnknownRegister(usize, String),
-
-    #[error("Malformed number '{1}' at line {0}")]
-    MalformedNumber(usize, String),
-
-    #[error("Type mismatch '{1}' at line {0}")]
-    TypeMismatch(usize, String),
-
-    #[error("{1} at line {0}")]
-    LoadOpFail(usize, String),
-
-    #[error("Error resolving label '{1}' at line {0}")]
-    LabelResolution(usize, String),
-
-    #[error("Unknown argument '{1}' at line {0}")]
-    UnknownArgument(usize, String),
-}
-
 impl Assembler {
     #[must_use]
     pub fn new() -> Self {
-        Self {}
+        Assembler::default()
     }
 
-    // TODO: Add .org
-    // TODO: Add line numbers to errors
-    // TODO: Error type instead of Vec<string>
-    pub fn assemble(&self, source_code: String) -> Result<(Vec<u8>, u8), AssemblerError> {
-        let mut result = Vec::new();
+    pub fn add_log(&mut self, line: String) {
+        self.log += &line;
+    }
+
+    pub fn log(&self) -> String {
+        self.log.clone()
+    }
+
+    // TODO: Assembler output
+    pub fn assemble(&mut self, source_code: String) -> Result<(Vec<u8>, u8), AssemblerError> {
         // <Label, Calling Address>
         let mut labels: HashMap<String, u8> = HashMap::new();
 
-        let lines: Vec<&str> = source_code.split_terminator("\n").collect();
-        eprintln!("---------------------------");
-        eprintln!("Line count: {}", lines.len());
+        let mut asm_result = AssemblerResult::new();
 
-        let mut program_counter = 0u8;
+        let source_lines: Vec<&str> = source_code.split_terminator("\n").collect();
 
-        // TODO: Return errors with line numbers
-        for (line_num, line) in lines.iter().enumerate() {
-            eprintln!("---------------------------");
-            eprintln!("{:?}: {}", line_num, line);
+        self.add_log("---------------------------".to_owned());
+        self.add_log(format!("Line count: {}", source_lines.len()));
+
+        for (line_num, line) in source_lines.iter().enumerate() {
+            self.line_number = line_num;
+            self.add_log("---------------------------".to_owned());
+            self.add_log(format!("{:?}: {}", line_num, line));
 
             // Skip empty lines and comment lines
             if line.starts_with(";") || line.is_empty() {
-                eprintln!("Skipping empty or comment");
+                self.add_log("Skipping empty or comment".to_owned());
                 continue;
             }
 
@@ -80,11 +67,11 @@ impl Assembler {
             match pre.to_lowercase().as_str() {
                 "ld" => {
                     let (lhs, rhs) = split_two_args(post);
-                    eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
+                    self.add_log(format!("lhs_str: {}\nrhs_str: {}", lhs, rhs));
 
                     let lhs = resolve_argument(&lhs, line_num)?;
                     let rhs = resolve_argument(&rhs, line_num)?;
-                    eprintln!("lhs: {:?}\nrhs: {:?}", lhs, rhs);
+                    self.add_log(format!("lhs: {:?}\nrhs: {:?}", lhs, rhs));
 
                     match lhs {
                         ValueType::Register(r0) => match rhs {
@@ -93,27 +80,27 @@ impl Assembler {
                                 let high = (0x4u8 << 4) | r0;
                                 let low = r1;
 
-                                eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
-                                result.push(high);
-                                result.push(low);
+                                self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                                asm_result.rom_mut().push(high);
+                                asm_result.rom_mut().push(low);
                             }
                             ValueType::Address(a) => {
                                 //0x1RXY
                                 let high = (0x1u8 << 4) | r0;
                                 let low = a;
 
-                                eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
-                                result.push(high);
-                                result.push(low);
+                                self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                                asm_result.rom_mut().push(high);
+                                asm_result.rom_mut().push(low);
                             }
                             ValueType::Literal(l) => {
                                 //0x2RXY
                                 let high = (0x2u8 << 4) | r0;
                                 let low = l;
 
-                                eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
-                                result.push(high);
-                                result.push(low);
+                                self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                                asm_result.rom_mut().push(high);
+                                asm_result.rom_mut().push(low);
                             }
                             ValueType::Label(l) => {
                                 return Err(AssemblerError::TypeMismatch(line_num, l))
@@ -126,9 +113,9 @@ impl Assembler {
                                     let high = (0x3u8 << 4) | r;
                                     let low = a;
 
-                                    eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
-                                    result.push(high);
-                                    result.push(low);
+                                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                                    asm_result.rom_mut().push(high);
+                                    asm_result.rom_mut().push(low);
                                 }
                                 _ => {
                                     return Err(AssemblerError::TypeMismatch(
@@ -149,69 +136,69 @@ impl Assembler {
                 "adds" => {
                     // TODO: Not tested
                     //0x5RST
-                    let (r, s, t) = self.resolve_rst(post, line_num);
+                    let (r, s, t) = self.resolve_rst(post);
 
                     let high = (0x5u8 << 4) | r;
                     let low = (s << 4) | t;
 
-                    eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
-                    result.push(high);
-                    result.push(low);
+                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                    asm_result.rom_mut().push(high);
+                    asm_result.rom_mut().push(low);
                 }
                 "addf" => {
                     // TODO: Not tested
                     //0x6RST
 
-                    let (r, s, t) = self.resolve_rst(post, line_num);
+                    let (r, s, t) = self.resolve_rst(post);
 
                     let high = (0x6u8 << 4) | r;
                     let low = (s << 4) | t;
 
-                    eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
-                    result.push(high);
-                    result.push(low);
+                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                    asm_result.rom_mut().push(high);
+                    asm_result.rom_mut().push(low);
                 }
                 "or" => {
                     // TODO: Not tested
                     //0x7RST
-                    let (r, s, t) = self.resolve_rst(post, line_num);
+                    let (r, s, t) = self.resolve_rst(post);
 
                     let high = (0x7u8 << 4) | r;
                     let low = (s << 4) | t;
 
-                    eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
-                    result.push(high);
-                    result.push(low);
+                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                    asm_result.rom_mut().push(high);
+                    asm_result.rom_mut().push(low);
                 }
                 "and" => {
                     // TODO: Not tested
                     //0x8RST
-                    let (r, s, t) = self.resolve_rst(post, line_num);
+                    let (r, s, t) = self.resolve_rst(post);
 
                     let high = (0x8u8 << 4) | r;
                     let low = (s << 4) | t;
 
-                    eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
-                    result.push(high);
-                    result.push(low);
+                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                    asm_result.rom_mut().push(high);
+                    asm_result.rom_mut().push(low);
                 }
                 "xor" => {
                     // TODO: Not tested
                     //0x9RST
-                    let (r, s, t) = self.resolve_rst(post, line_num);
+                    let (r, s, t) = self.resolve_rst(post);
 
                     let high = (0x9u8 << 4) | r;
                     let low = (s << 4) | t;
 
-                    eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
-                    result.push(high);
-                    result.push(low);
+                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                    asm_result.rom_mut().push(high);
+                    asm_result.rom_mut().push(low);
                 }
                 "rot" => {
                     // TODO: Not tested
                     //0xAR0X
                     let (lhs, rhs) = split_two_args(post);
-                    eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
+                    self.add_log(format!("lhs_str: {}\nrhs_str: {}", lhs, rhs));
 
                     let lhs = match resolve_argument(&lhs, line_num) {
                         Ok(v) => match v {
@@ -241,26 +228,26 @@ impl Assembler {
                             return Err(e);
                         }
                     };
-                    eprintln!("lhs: {:?}\nrhs: {:?}", lhs, rhs);
+                    self.add_log(format!("lhs: {:?}\nrhs: {:?}", lhs, rhs));
 
                     let high = (0xAu8 << 4) | lhs;
                     let low = rhs;
 
-                    eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
-                    result.push(high);
-                    result.push(low);
+                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                    asm_result.rom_mut().push(high);
+                    asm_result.rom_mut().push(low);
                 }
                 "halt" => {
-                    result.push(0xC0);
-                    result.push(0x00);
-                    eprintln!("Pushing 0xC0, 0x00");
+                    asm_result.rom_mut().push(0xC0);
+                    asm_result.rom_mut().push(0x00);
+                    self.add_log("Pushing 0xC0, 0x00".to_owned());
                 }
                 "jp" => {
                     // TODO: Handle labels
                     // TODO: Add support for multiple jump instructions to the same label
                     //0xBRXY
                     let (lhs, rhs) = split_two_args(post);
-                    eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
+                    self.add_log(format!("lhs_str: {}\nrhs_str: {}", lhs, rhs));
 
                     let lhs = match resolve_argument(&lhs, line_num) {
                         Ok(v) => match v {
@@ -280,16 +267,16 @@ impl Assembler {
                     let high = (0xBu8 << 4) | lhs;
                     let low = 0xFF;
 
-                    eprintln!("Pushing: {:#04X?}, {:#04X?}", high, low);
-                    result.push(high);
-                    result.push(low);
+                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                    asm_result.rom_mut().push(high);
+                    asm_result.rom_mut().push(low);
 
-                    let call_address = result.len() - 1;
+                    let call_address = asm_result.rom().len() - 1;
                     labels.insert(rhs, call_address as u8);
-                    eprintln!("Label call address: {}", call_address);
+                    self.add_log(format!("Label call address: {}", call_address));
                 }
                 ".org" => {
-                    program_counter = match resolve_argument(post, line_num) {
+                    *asm_result.program_counter_mut() = match resolve_argument(post, line_num) {
                         Ok(result) => match result {
                             ValueType::Literal(v) => v,
                             _ => {
@@ -304,23 +291,22 @@ impl Assembler {
                         }
                     };
 
-                    result.resize(program_counter as usize, 0x00);
+                    let new_size = asm_result.program_counter() as usize;
+                    asm_result.rom_mut().resize(new_size, 0x00);
                 }
                 unknown => {
                     if unknown.trim_end().ends_with(":") {
                         let label = unknown.trim_end_matches(":");
 
                         if labels.contains_key(label) {
-                            eprintln!("Labels");
-
                             // TODO: Check for unresolved labels
                             match labels.remove_entry(label) {
                                 Some((_k, call)) => {
                                     // The target jump address will be the next line
-                                    let target = result.len() as u8;
-                                    result[call as usize] = target;
+                                    let target = asm_result.rom().len() as u8;
+                                    asm_result.rom_mut()[call as usize] = target;
 
-                                    eprintln!("Storing jump target {:#04X?}", target);
+                                    self.add_log(format!("Storing jump target {:#04X?}", target));
                                 }
                                 None => {
                                     return Err(AssemblerError::LabelResolution(
@@ -337,20 +323,20 @@ impl Assembler {
             }
         }
 
-        if result.len() % 2 != 0 {
-            result.push(0x00);
+        if asm_result.rom().len() % 2 != 0 {
+            asm_result.rom_mut().push(0x00);
         }
 
-        eprintln!("---------------------------");
-        eprintln!("Assembler completed");
+        self.add_log("---------------------------".to_owned());
+        self.add_log("Assembler completed".to_owned());
 
-        Ok((result, program_counter))
+        Ok((asm_result.rom().to_vec(), asm_result.program_counter()))
     }
 
-    fn resolve_rst(&self, arg: &str, line_number: usize) -> (u8, u8, u8) {
+    fn resolve_rst(&self, arg: &str) -> (u8, u8, u8) {
         let (r, s, t) = split_three_args(arg);
 
-        let r = match resolve_argument(&r, line_number) {
+        let r = match resolve_argument(&r, self.line_number) {
             Ok(v) => match v {
                 ValueType::Register(v) => v,
                 error => {
@@ -366,7 +352,7 @@ impl Assembler {
             }
         };
 
-        let s = match resolve_argument(&s, line_number) {
+        let s = match resolve_argument(&s, self.line_number) {
             Ok(v) => match v {
                 ValueType::Register(v) => v,
                 error => {
@@ -382,7 +368,7 @@ impl Assembler {
             }
         };
 
-        let t = match resolve_argument(&t, line_number) {
+        let t = match resolve_argument(&t, self.line_number) {
             Ok(v) => match v {
                 ValueType::Register(v) => v,
                 error => {
@@ -520,7 +506,7 @@ mod tests {
 
     #[test]
     fn ld() {
-        let asm = Assembler::new();
+        let mut asm = Assembler::new();
 
         let l1 = "ld r0, 0x01".to_owned();
         let result = asm.assemble(l1).expect("Invalid assembler output");
@@ -533,7 +519,7 @@ mod tests {
 
     #[test]
     fn ld_0x2() {
-        let asm = Assembler::new();
+        let mut asm = Assembler::new();
         let mut rng = rand::rng();
 
         let mut program = String::new();
@@ -623,7 +609,7 @@ continue:
     ld (0x46), r5  ; Store r5 into mem 0x46
     halt           ; Quit";
 
-        let asm = Assembler::new();
+        let mut asm = Assembler::new();
         let result = asm
             .assemble(TEST_SOURCE.to_string())
             .expect("Invalid assembler output");
@@ -676,7 +662,7 @@ continue:
             0xC0, 0x00, // Quit
         ];
 
-        let asm = Assembler::new();
+        let mut asm = Assembler::new();
         let result = asm
             .assemble(MNEMONIC_SOURCE.to_string())
             .expect("Invalid assembler output");
