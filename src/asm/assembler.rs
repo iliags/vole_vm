@@ -612,45 +612,6 @@ mod tests {
 
     #[test]
     fn demo_program() {
-        const TEST_RESULT: &[u8] = &[
-            0x20, 0x00, // Load 0x00 into r0
-            0x25, 0xFF, // Load 0xFF into r5
-            0x14, 0x44, // Load mem 0x44 into r4
-            0xB4, 0x0A, // If r4 == r0, jump to mem 0x0A (skip next line)
-            0x25, 0x01, // load 0x01 into r5
-            0x35, 0x46, // Store r5 into mem 0x46
-            0xC0, 0x00, // Quit
-        ];
-
-        const TEST_SOURCE: &str = "
-ld r0,0x00        ; Load 0x00 into r0
-LD R5, 0xFF        ; Load 0xFF into r5
-Ld r4, (0x44)      ; Load mem 0x44 into r4
-
-jp r4, continue    ; If r4 == r0, jump to continue
-lD r5, 0x01        ; Load 0x01 into r5
-
-continue:
-    ld (0x46), r5  ; Store r5 into mem 0x46
-    halt           ; Quit";
-
-        let mut asm = Assembler::new();
-        let result = match asm.assemble(TEST_SOURCE.to_string()) {
-            Ok(v) => v,
-            Err(e) => {
-                println!("{e}");
-
-                let log = asm.log().to_string();
-                println!("{log}");
-                AssemblerResult::default()
-            }
-        };
-
-        assert_eq!(result.rom(), TEST_RESULT);
-    }
-
-    #[test]
-    fn mnemonics() {
         let mut asm = Assembler::new();
         let result = match asm.assemble(DEMO_SOURCE.to_string()) {
             Ok(v) => v,
