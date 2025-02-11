@@ -497,9 +497,8 @@ fn split_three_args(args: &str) -> (String, String, String) {
 
 #[cfg(test)]
 mod tests {
-    use crate::asm::{DEMO_ROM, DEMO_SOURCE};
-
     use super::*;
+    use crate::asm::{DEMO_ROM, DEMO_SOURCE};
     use rand::{self, Rng};
 
     #[test]
