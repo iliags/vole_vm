@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use thiserror::Error;
 
 #[derive(Debug, Default)]
 pub struct Assembler;
@@ -11,6 +12,30 @@ enum ValueType {
     Label(String),
 }
 
+#[derive(Error, Debug)]
+pub enum AssemblerError {
+    #[error("Malformed memory address '{1}' at line {0}")]
+    MalformedAddress(usize, String),
+
+    #[error("Unknown register '{1}' at line {0}")]
+    UnknownRegister(usize, String),
+
+    #[error("Malformed number '{1}' at line {0}")]
+    MalformedNumber(usize, String),
+
+    #[error("Type mismatch '{1}' at line {0}")]
+    TypeMismatch(usize, String),
+
+    #[error("{1} at line {0}")]
+    LoadOpFail(usize, String),
+
+    #[error("Error resolving label '{1}' at line {0}")]
+    LabelResolution(usize, String),
+
+    #[error("Unknown argument '{1}' at line {0}")]
+    UnknownArgument(usize, String),
+}
+
 impl Assembler {
     #[must_use]
     pub fn new() -> Self {
@@ -20,7 +45,7 @@ impl Assembler {
     // TODO: Add .org
     // TODO: Add line numbers to errors
     // TODO: Error type instead of Vec<string>
-    pub fn assemble(&self, source_code: String) -> Result<(Vec<u8>, u8), Vec<String>> {
+    pub fn assemble(&self, source_code: String) -> Result<(Vec<u8>, u8), AssemblerError> {
         let mut result = Vec::new();
         // <Label, Calling Address>
         let mut labels: HashMap<String, u8> = HashMap::new();
@@ -57,29 +82,14 @@ impl Assembler {
                     let (lhs, rhs) = split_two_args(post);
                     eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
 
-                    let lhs = match resolve_argument(&lhs) {
-                        Ok(v) => v,
-                        Err(e) => {
-                            // TODO: Fix this
-                            println!("Fix this: {:?}", e);
-                            ValueType::Literal(0x00)
-                        }
-                    };
-                    let rhs = match resolve_argument(&rhs) {
-                        Ok(v) => v,
-                        Err(e) => {
-                            // TODO: Fix this
-                            println!("Fix this: {:?}", e);
-                            ValueType::Literal(0x00)
-                        }
-                    };
+                    let lhs = resolve_argument(&lhs, line_num)?;
+                    let rhs = resolve_argument(&rhs, line_num)?;
                     eprintln!("lhs: {:?}\nrhs: {:?}", lhs, rhs);
 
                     match lhs {
                         ValueType::Register(r0) => match rhs {
                             ValueType::Register(r1) => {
                                 //0x4RXY
-                                // TODO: Not tested
                                 let high = (0x4u8 << 4) | r0;
                                 let low = r1;
 
@@ -106,10 +116,7 @@ impl Assembler {
                                 result.push(low);
                             }
                             ValueType::Label(l) => {
-                                // TODO: Fix this
-                                let msg = format!("Cannot store {} in register", l);
-                                println!("{}", msg);
-                                continue;
+                                return Err(AssemblerError::TypeMismatch(line_num, l))
                             }
                         },
                         ValueType::Address(a) => {
@@ -123,25 +130,26 @@ impl Assembler {
                                     result.push(high);
                                     result.push(low);
                                 }
-                                other => {
-                                    // TODO: Fix this
-                                    let msg = format!("Cannot store {:?} in memory", other);
-                                    println!("{}", msg);
-                                    continue;
+                                _ => {
+                                    return Err(AssemblerError::TypeMismatch(
+                                        line_num,
+                                        "non-register value".to_owned(),
+                                    ));
                                 }
                             };
                         }
                         _ => {
-                            // TODO: Fix this
-                            println!("Failed to determine ld type");
-                            continue;
+                            return Err(AssemblerError::LoadOpFail(
+                                line_num,
+                                "Failed to determine ld type".to_owned(),
+                            ));
                         }
                     };
                 }
                 "adds" => {
                     // TODO: Not tested
                     //0x5RST
-                    let (r, s, t) = self.resolve_rst(post);
+                    let (r, s, t) = self.resolve_rst(post, line_num);
 
                     let high = (0x5u8 << 4) | r;
                     let low = (s << 4) | t;
@@ -154,7 +162,7 @@ impl Assembler {
                     // TODO: Not tested
                     //0x6RST
 
-                    let (r, s, t) = self.resolve_rst(post);
+                    let (r, s, t) = self.resolve_rst(post, line_num);
 
                     let high = (0x6u8 << 4) | r;
                     let low = (s << 4) | t;
@@ -166,7 +174,7 @@ impl Assembler {
                 "or" => {
                     // TODO: Not tested
                     //0x7RST
-                    let (r, s, t) = self.resolve_rst(post);
+                    let (r, s, t) = self.resolve_rst(post, line_num);
 
                     let high = (0x7u8 << 4) | r;
                     let low = (s << 4) | t;
@@ -178,7 +186,7 @@ impl Assembler {
                 "and" => {
                     // TODO: Not tested
                     //0x8RST
-                    let (r, s, t) = self.resolve_rst(post);
+                    let (r, s, t) = self.resolve_rst(post, line_num);
 
                     let high = (0x8u8 << 4) | r;
                     let low = (s << 4) | t;
@@ -190,7 +198,7 @@ impl Assembler {
                 "xor" => {
                     // TODO: Not tested
                     //0x9RST
-                    let (r, s, t) = self.resolve_rst(post);
+                    let (r, s, t) = self.resolve_rst(post, line_num);
 
                     let high = (0x9u8 << 4) | r;
                     let low = (s << 4) | t;
@@ -205,34 +213,32 @@ impl Assembler {
                     let (lhs, rhs) = split_two_args(post);
                     eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
 
-                    let lhs = match resolve_argument(&lhs) {
+                    let lhs = match resolve_argument(&lhs, line_num) {
                         Ok(v) => match v {
                             ValueType::Register(r) => r,
-                            other => {
-                                // TODO: Fix this
-                                println!("Fix this: {:?}", other);
-                                0x00
+                            _ => {
+                                return Err(AssemblerError::TypeMismatch(
+                                    line_num,
+                                    "non-register".to_string(),
+                                ));
                             }
                         },
                         Err(e) => {
-                            // TODO: Fix this
-                            println!("Fix this: {:?}", e);
-                            0x00
+                            return Err(e);
                         }
                     };
-                    let rhs = match resolve_argument(&rhs) {
+                    let rhs = match resolve_argument(&rhs, line_num) {
                         Ok(v) => match v {
                             ValueType::Literal(l) => l,
-                            other => {
-                                // TODO: Fix this
-                                println!("Fix this: {:?}", other);
-                                0x00
+                            _ => {
+                                return Err(AssemblerError::TypeMismatch(
+                                    line_num,
+                                    "non-literal".to_string(),
+                                ));
                             }
                         },
                         Err(e) => {
-                            // TODO: Fix this
-                            println!("Fix this: {:?}", e);
-                            0x00
+                            return Err(e);
                         }
                     };
                     eprintln!("lhs: {:?}\nrhs: {:?}", lhs, rhs);
@@ -256,21 +262,18 @@ impl Assembler {
                     let (lhs, rhs) = split_two_args(post);
                     eprintln!("lhs_str: {}\nrhs_str: {}", lhs, rhs);
 
-                    let lhs = match resolve_argument(&lhs) {
+                    let lhs = match resolve_argument(&lhs, line_num) {
                         Ok(v) => match v {
                             ValueType::Register(r) => r,
-                            other => {
-                                // TODO: Fix this
-                                let msg = format!("Invalid argument for jp {:?}", other);
-                                println!("{}", msg);
-                                continue;
+                            _ => {
+                                return Err(AssemblerError::TypeMismatch(
+                                    line_num,
+                                    "non-register".to_string(),
+                                ));
                             }
                         },
                         Err(e) => {
-                            // TODO: Fix this
-                            let msg = format!("Error resoloving argument {}", e);
-                            println!("{}", msg);
-                            continue;
+                            return Err(e);
                         }
                     };
 
@@ -286,23 +289,18 @@ impl Assembler {
                     eprintln!("Label call address: {}", call_address);
                 }
                 ".org" => {
-                    program_counter = match resolve_argument(post) {
-                        Ok(result) => {
-                            match result {
-                                ValueType::Literal(v) => v,
-                                e => {
-                                    // TODO: Fix this
-                                    let msg = format!("Error resoloving argument {:?}", e);
-                                    println!("{}", msg);
-                                    0
-                                }
+                    program_counter = match resolve_argument(post, line_num) {
+                        Ok(result) => match result {
+                            ValueType::Literal(v) => v,
+                            _ => {
+                                return Err(AssemblerError::TypeMismatch(
+                                    line_num,
+                                    "non-literal".to_string(),
+                                ));
                             }
-                        }
+                        },
                         Err(e) => {
-                            // TODO: Fix this
-                            let msg = format!("Error resoloving argument {}", e);
-                            println!("{}", msg);
-                            0
+                            return Err(e);
                         }
                     };
 
@@ -325,10 +323,10 @@ impl Assembler {
                                     eprintln!("Storing jump target {:#04X?}", target);
                                 }
                                 None => {
-                                    // TODO: Fix this
-                                    let msg = format!("Error resoloving label: {}", label);
-                                    println!("{}", msg);
-                                    continue;
+                                    return Err(AssemblerError::LabelResolution(
+                                        line_num,
+                                        label.to_string(),
+                                    ))
                                 }
                             }
                         }
@@ -349,10 +347,10 @@ impl Assembler {
         Ok((result, program_counter))
     }
 
-    fn resolve_rst(&self, arg: &str) -> (u8, u8, u8) {
+    fn resolve_rst(&self, arg: &str, line_number: usize) -> (u8, u8, u8) {
         let (r, s, t) = split_three_args(arg);
 
-        let r = match resolve_argument(&r) {
+        let r = match resolve_argument(&r, line_number) {
             Ok(v) => match v {
                 ValueType::Register(v) => v,
                 error => {
@@ -368,7 +366,7 @@ impl Assembler {
             }
         };
 
-        let s = match resolve_argument(&s) {
+        let s = match resolve_argument(&s, line_number) {
             Ok(v) => match v {
                 ValueType::Register(v) => v,
                 error => {
@@ -384,7 +382,7 @@ impl Assembler {
             }
         };
 
-        let t = match resolve_argument(&t) {
+        let t = match resolve_argument(&t, line_number) {
             Ok(v) => match v {
                 ValueType::Register(v) => v,
                 error => {
@@ -404,7 +402,7 @@ impl Assembler {
     }
 }
 
-fn register_to_value(reg: &str) -> Result<u8, String> {
+fn register_to_value(reg: &str, line_number: usize) -> Result<u8, AssemblerError> {
     match reg {
         "r0" => Ok(0x0),
         "r2" => Ok(0x2),
@@ -422,7 +420,10 @@ fn register_to_value(reg: &str) -> Result<u8, String> {
         "rd" => Ok(0xD),
         "re" => Ok(0xE),
         "rf" => Ok(0xF),
-        _ => Err(format!("Invalid register {reg}")),
+        _ => Err(AssemblerError::UnknownRegister(
+            line_number,
+            reg.to_string(),
+        )),
     }
 }
 
@@ -465,18 +466,15 @@ fn split_three_args(args: &str) -> (String, String, String) {
     )
 }
 
-fn resolve_argument(arg: &str) -> Result<ValueType, String> {
+fn resolve_argument(arg: &str, line_number: usize) -> Result<ValueType, AssemblerError> {
     let val = arg.to_lowercase();
     if val.starts_with('r') {
         // Register
-        match register_to_value(val.as_str()) {
+        match register_to_value(val.as_str(), line_number) {
             Ok(v) => {
                 return Ok(ValueType::Register(v));
             }
-            Err(e) => {
-                // TODO: Fix this
-                println!("Fix this: {e}");
-            }
+            Err(e) => return Err(e),
         }
     }
 
@@ -486,13 +484,12 @@ fn resolve_argument(arg: &str) -> Result<ValueType, String> {
             Ok(v) => {
                 return Ok(ValueType::Address(v));
             }
-            Err(e) => {
-                // TODO: Fix this
-                println!("Fix this: {e}");
+            Err(_) => {
+                return Err(AssemblerError::MalformedAddress(line_number, val));
             }
         }
     } else if val.starts_with('(') || val.ends_with(')') {
-        return Err(format!("Malformed memory address: {val}"));
+        return Err(AssemblerError::MalformedAddress(line_number, val));
     }
 
     if val.starts_with("0x") || val.starts_with("0b") {
@@ -501,9 +498,8 @@ fn resolve_argument(arg: &str) -> Result<ValueType, String> {
             Ok(v) => {
                 return Ok(ValueType::Literal(v));
             }
-            Err(e) => {
-                // TODO: Fix this
-                println!("Fix this: {e}");
+            Err(_) => {
+                return Err(AssemblerError::MalformedNumber(line_number, val));
             }
         }
     }
@@ -513,7 +509,8 @@ fn resolve_argument(arg: &str) -> Result<ValueType, String> {
     }
 
     //TODO: labels
-    Ok(ValueType::Literal(0x0))
+    //Ok(ValueType::Literal(0x0))
+    Err(AssemblerError::UnknownArgument(line_number, val))
 }
 
 #[cfg(test)]
