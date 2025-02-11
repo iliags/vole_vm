@@ -487,7 +487,7 @@ impl eframe::App for VoleUI {
                                 let (rom, pc) = match result {
                                     Ok(r) => {
                                         self.compilation_error = None;
-                                        (r.0, r.1)
+                                        (r.rom().to_vec(), r.program_counter())
                                     }
                                     Err(e) => {
                                         // TODO: Push to UI

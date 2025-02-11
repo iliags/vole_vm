@@ -31,7 +31,7 @@ impl Assembler {
         self.log.clone()
     }
 
-    pub fn assemble(&mut self, source_code: String) -> Result<(Vec<u8>, u8), AssemblerError> {
+    pub fn assemble(&mut self, source_code: String) -> Result<AssemblerResult, AssemblerError> {
         // <Label, Calling Address>
         let mut labels: HashMap<String, u8> = HashMap::new();
 
@@ -323,7 +323,7 @@ impl Assembler {
         self.add_log("---------------------------".to_owned());
         self.add_log("Assembler completed".to_owned());
 
-        Ok((asm_result.rom().to_vec(), asm_result.program_counter()))
+        Ok(asm_result)
     }
 
     fn resolve_rst(&self, arg: &str) -> Result<(u8, u8, u8), AssemblerError> {
@@ -499,12 +499,30 @@ mod tests {
         let mut asm = Assembler::new();
 
         let l1 = "ld r0, 0x01".to_owned();
-        let result = asm.assemble(l1).expect("Invalid assembler output");
-        assert_eq!(result.0, [0x20, 0x01]);
+        let result = match asm.assemble(l1) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{e}");
+
+                let log = format!("{}", asm.log());
+                println!("{log}");
+                AssemblerResult::default()
+            }
+        };
+        assert_eq!(result.rom(), [0x20, 0x01]);
 
         let l2 = "ld r0, 0b00000001".to_owned();
-        let result = asm.assemble(l2).expect("Invalid assembler output");
-        assert_eq!(result.0, [0x20, 0x01]);
+        let result = match asm.assemble(l2) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{e}");
+
+                let log = format!("{}", asm.log());
+                println!("{log}");
+                AssemblerResult::default()
+            }
+        };
+        assert_eq!(result.rom(), [0x20, 0x01]);
     }
 
     #[test]
@@ -533,8 +551,17 @@ mod tests {
         }
 
         // TODO: Actually compare values
-        let result = asm.assemble(program).expect("Invalid assembler output");
-        assert_eq!(result.0.len(), 32);
+        let result = match asm.assemble(program) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{e}");
+
+                let log = format!("{}", asm.log());
+                println!("{log}");
+                AssemblerResult::default()
+            }
+        };
+        assert_eq!(result.rom().len(), 32);
     }
 
     #[test]
@@ -600,11 +627,18 @@ continue:
     halt           ; Quit";
 
         let mut asm = Assembler::new();
-        let result = asm
-            .assemble(TEST_SOURCE.to_string())
-            .expect("Invalid assembler output");
+        let result = match asm.assemble(TEST_SOURCE.to_string()) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{e}");
 
-        assert_eq!(result.0, TEST_RESULT);
+                let log = format!("{}", asm.log());
+                println!("{log}");
+                AssemblerResult::default()
+            }
+        };
+
+        assert_eq!(result.rom(), TEST_RESULT);
     }
 
     #[test]
@@ -653,11 +687,18 @@ continue:
         ];
 
         let mut asm = Assembler::new();
-        let result = asm
-            .assemble(MNEMONIC_SOURCE.to_string())
-            .expect("Invalid assembler output");
+        let result = match asm.assemble(MNEMONIC_SOURCE.to_string()) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{e}");
 
-        assert_eq!(result.0, MNEMONIC_RESULT);
+                let log = format!("{}", asm.log());
+                println!("{log}");
+                AssemblerResult::default()
+            }
+        };
+
+        assert_eq!(result.rom(), MNEMONIC_RESULT);
     }
 
     fn decimal_to_register_string(reg: usize) -> Result<String, String> {
