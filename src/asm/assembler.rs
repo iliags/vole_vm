@@ -422,12 +422,12 @@ impl Assembler {
 
         if val.starts_with('(') && val.ends_with(')') {
             // Memory address
-            match numeric_to_value(val.as_str()) {
+            match self.numeric_to_value(val.as_str()) {
                 Ok(v) => {
                     return Ok(ValueType::Address(v));
                 }
-                Err(_) => {
-                    return Err(AssemblerError::MalformedAddress(self.line_number, val));
+                Err(e) => {
+                    return Err(e);
                 }
             }
         } else if val.starts_with('(') || val.ends_with(')') {
@@ -436,12 +436,12 @@ impl Assembler {
 
         if val.starts_with("0x") || val.starts_with("0b") {
             // Literal
-            match numeric_to_value(val.as_str()) {
+            match self.numeric_to_value(val.as_str()) {
                 Ok(v) => {
                     return Ok(ValueType::Literal(v));
                 }
-                Err(_) => {
-                    return Err(AssemblerError::MalformedNumber(self.line_number, val));
+                Err(e) => {
+                    return Err(e);
                 }
             }
         }
@@ -454,31 +454,37 @@ impl Assembler {
         //Ok(ValueType::Literal(0x0))
         Err(AssemblerError::UnknownArgument(self.line_number, val))
     }
-}
 
-fn numeric_to_value(num: &str) -> Result<u8, String> {
-    let value = num.trim_start_matches('(').trim_end_matches(')');
+    fn numeric_to_value(&self, num: &str) -> Result<u8, AssemblerError> {
+        let value = num.trim_start_matches('(').trim_end_matches(')');
 
-    let radix = if value.starts_with("0x") {
-        16
-    } else if value.starts_with("0b") {
-        2
-    } else {
-        return Err(format!("Malformed number: {num}"));
-    };
+        let radix = if value.starts_with("0x") {
+            16
+        } else if value.starts_with("0b") {
+            2
+        } else {
+            return Err(AssemblerError::MalformedNumber(
+                self.line_number,
+                num.to_string(),
+            ));
+        };
 
-    let prefix = if value.starts_with("0x") {
-        "0x"
-    } else if value.starts_with("0b") {
-        "0b"
-    } else {
-        return Err(format!("Malformed number: {num}"));
-    };
+        let prefix = if value.starts_with("0x") {
+            "0x"
+        } else if value.starts_with("0b") {
+            "0b"
+        } else {
+            return Err(AssemblerError::MalformedNumber(
+                self.line_number,
+                num.to_string(),
+            ));
+        };
 
-    let value = value.strip_prefix(prefix).unwrap_or(value);
-    let value = u8::from_str_radix(value, radix).unwrap_or_default();
+        let value = value.strip_prefix(prefix).unwrap_or(value);
+        let value = u8::from_str_radix(value, radix).unwrap_or_default();
 
-    Ok(value)
+        Ok(value)
+    }
 }
 
 fn split_two_args(args: &str) -> (String, String) {
