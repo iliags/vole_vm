@@ -23,14 +23,17 @@ impl Assembler {
         Assembler::default()
     }
 
-    pub fn add_log(&mut self, line: String) {
-        self.log += &line;
+    pub fn add_log(&mut self, line: &str) {
+        self.log += line;
     }
 
     pub fn log(&self) -> String {
         self.log.clone()
     }
 
+    /// # Errors
+    ///
+    /// Will return `AssemblerError` if an error occurs during assembly
     pub fn assemble(&mut self, source_code: String) -> Result<AssemblerResult, AssemblerError> {
         // <Label, Calling Address>
         let mut labels: HashMap<String, u8> = HashMap::new();
@@ -39,17 +42,17 @@ impl Assembler {
 
         let source_lines: Vec<&str> = source_code.split_terminator("\n").collect();
 
-        self.add_log("---------------------------".to_owned());
-        self.add_log(format!("Line count: {}", source_lines.len()));
+        self.add_log("---------------------------");
+        self.add_log(&format!("Line count: {}", source_lines.len()));
 
         for (line_num, line) in source_lines.iter().enumerate() {
             self.line_number = line_num;
-            self.add_log("---------------------------".to_owned());
-            self.add_log(format!("{:?}: {}", line_num, line));
+            self.add_log("---------------------------");
+            self.add_log(&format!("{:?}: {}", line_num, line));
 
             // Skip empty lines and comment lines
             if line.starts_with(";") || line.is_empty() {
-                self.add_log("Skipping empty or comment".to_owned());
+                self.add_log("Skipping empty or comment");
                 continue;
             }
 
@@ -66,11 +69,11 @@ impl Assembler {
             match pre.to_lowercase().as_str() {
                 "ld" => {
                     let (lhs, rhs) = split_two_args(post);
-                    self.add_log(format!("lhs_str: {}\nrhs_str: {}", lhs, rhs));
+                    self.add_log(&format!("lhs_str: {}\nrhs_str: {}", lhs, rhs));
 
                     let lhs = self.resolve_argument(&lhs)?;
                     let rhs = self.resolve_argument(&rhs)?;
-                    self.add_log(format!("lhs: {:?}\nrhs: {:?}", lhs, rhs));
+                    self.add_log(&format!("lhs: {:?}\nrhs: {:?}", lhs, rhs));
 
                     match lhs {
                         ValueType::Register(r0) => match rhs {
@@ -79,7 +82,7 @@ impl Assembler {
                                 let high = (0x4u8 << 4) | r0;
                                 let low = r1;
 
-                                self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                                self.add_log(&format!("Pushing: {:#04X?}, {:#04X?}", high, low));
                                 asm_result.rom_mut().push(high);
                                 asm_result.rom_mut().push(low);
                             }
@@ -88,7 +91,7 @@ impl Assembler {
                                 let high = (0x1u8 << 4) | r0;
                                 let low = a;
 
-                                self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                                self.add_log(&format!("Pushing: {:#04X?}, {:#04X?}", high, low));
                                 asm_result.rom_mut().push(high);
                                 asm_result.rom_mut().push(low);
                             }
@@ -97,7 +100,7 @@ impl Assembler {
                                 let high = (0x2u8 << 4) | r0;
                                 let low = l;
 
-                                self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                                self.add_log(&format!("Pushing: {:#04X?}, {:#04X?}", high, low));
                                 asm_result.rom_mut().push(high);
                                 asm_result.rom_mut().push(low);
                             }
@@ -112,7 +115,10 @@ impl Assembler {
                                     let high = (0x3u8 << 4) | r;
                                     let low = a;
 
-                                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                                    self.add_log(&format!(
+                                        "Pushing: {:#04X?}, {:#04X?}",
+                                        high, low
+                                    ));
                                     asm_result.rom_mut().push(high);
                                     asm_result.rom_mut().push(low);
                                 }
@@ -139,7 +145,7 @@ impl Assembler {
                     let high = (0x5u8 << 4) | r;
                     let low = (s << 4) | t;
 
-                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                    self.add_log(&format!("Pushing: {:#04X?}, {:#04X?}", high, low));
                     asm_result.rom_mut().push(high);
                     asm_result.rom_mut().push(low);
                 }
@@ -151,7 +157,7 @@ impl Assembler {
                     let high = (0x6u8 << 4) | r;
                     let low = (s << 4) | t;
 
-                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                    self.add_log(&format!("Pushing: {:#04X?}, {:#04X?}", high, low));
                     asm_result.rom_mut().push(high);
                     asm_result.rom_mut().push(low);
                 }
@@ -162,7 +168,7 @@ impl Assembler {
                     let high = (0x7u8 << 4) | r;
                     let low = (s << 4) | t;
 
-                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                    self.add_log(&format!("Pushing: {:#04X?}, {:#04X?}", high, low));
                     asm_result.rom_mut().push(high);
                     asm_result.rom_mut().push(low);
                 }
@@ -173,7 +179,7 @@ impl Assembler {
                     let high = (0x8u8 << 4) | r;
                     let low = (s << 4) | t;
 
-                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                    self.add_log(&format!("Pushing: {:#04X?}, {:#04X?}", high, low));
                     asm_result.rom_mut().push(high);
                     asm_result.rom_mut().push(low);
                 }
@@ -184,14 +190,14 @@ impl Assembler {
                     let high = (0x9u8 << 4) | r;
                     let low = (s << 4) | t;
 
-                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                    self.add_log(&format!("Pushing: {:#04X?}, {:#04X?}", high, low));
                     asm_result.rom_mut().push(high);
                     asm_result.rom_mut().push(low);
                 }
                 "rot" => {
                     //0xAR0X
                     let (lhs, rhs) = split_two_args(post);
-                    self.add_log(format!("lhs_str: {}\nrhs_str: {}", lhs, rhs));
+                    self.add_log(&format!("lhs_str: {}\nrhs_str: {}", lhs, rhs));
 
                     let lhs = match self.resolve_argument(&lhs) {
                         Ok(v) => match v {
@@ -221,26 +227,26 @@ impl Assembler {
                             return Err(e);
                         }
                     };
-                    self.add_log(format!("lhs: {:?}\nrhs: {:?}", lhs, rhs));
+                    self.add_log(&format!("lhs: {:?}\nrhs: {:?}", lhs, rhs));
 
                     let high = (0xAu8 << 4) | lhs;
                     let low = rhs;
 
-                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                    self.add_log(&format!("Pushing: {:#04X?}, {:#04X?}", high, low));
                     asm_result.rom_mut().push(high);
                     asm_result.rom_mut().push(low);
                 }
                 "halt" => {
                     asm_result.rom_mut().push(0xC0);
                     asm_result.rom_mut().push(0x00);
-                    self.add_log("Pushing 0xC0, 0x00".to_owned());
+                    self.add_log("Pushing 0xC0, 0x00");
                 }
                 "jp" => {
                     // TODO: Handle labels
                     // TODO: Add support for multiple jump instructions to the same label
                     //0xBRXY
                     let (lhs, rhs) = split_two_args(post);
-                    self.add_log(format!("lhs_str: {}\nrhs_str: {}", lhs, rhs));
+                    self.add_log(&format!("lhs_str: {}\nrhs_str: {}", lhs, rhs));
 
                     let lhs = match self.resolve_argument(&lhs) {
                         Ok(v) => match v {
@@ -260,13 +266,13 @@ impl Assembler {
                     let high = (0xBu8 << 4) | lhs;
                     let low = 0xFF;
 
-                    self.add_log(format!("Pushing: {:#04X?}, {:#04X?}", high, low));
+                    self.add_log(&format!("Pushing: {:#04X?}, {:#04X?}", high, low));
                     asm_result.rom_mut().push(high);
                     asm_result.rom_mut().push(low);
 
                     let call_address = asm_result.rom().len() - 1;
                     labels.insert(rhs, call_address as u8);
-                    self.add_log(format!("Label call address: {}", call_address));
+                    self.add_log(&format!("Label call address: {}", call_address));
                 }
                 ".org" => {
                     *asm_result.program_counter_mut() = match self.resolve_argument(post) {
@@ -299,7 +305,7 @@ impl Assembler {
                                     let target = asm_result.rom().len() as u8;
                                     asm_result.rom_mut()[call as usize] = target;
 
-                                    self.add_log(format!("Storing jump target {:#04X?}", target));
+                                    self.add_log(&format!("Storing jump target {:#04X?}", target));
                                 }
                                 None => {
                                     return Err(AssemblerError::LabelResolution(
@@ -320,8 +326,8 @@ impl Assembler {
             asm_result.rom_mut().push(0x00);
         }
 
-        self.add_log("---------------------------".to_owned());
-        self.add_log("Assembler completed".to_owned());
+        self.add_log("---------------------------");
+        self.add_log("Assembler completed");
 
         Ok(asm_result)
     }
@@ -491,6 +497,8 @@ fn split_three_args(args: &str) -> (String, String, String) {
 
 #[cfg(test)]
 mod tests {
+    use crate::asm::{DEMO_ROM, DEMO_SOURCE};
+
     use super::*;
     use rand::{self, Rng};
 
@@ -643,51 +651,8 @@ continue:
 
     #[test]
     fn mnemonics() {
-        const MNEMONIC_SOURCE: &str = "
-.org 0x02           ; Offset start by 2
-
-ld r0,0x00          ; Load 0x00 into r0
-ld r5, 0xFF         ; Load 0xFF into r5
-ld r4, (0x44)       ; Load mem 0x44 into r4
-
-jp r4, continue     ; If r4 == r0, jump to continue
-ld r5, 0x01         ; Load 0x01 into r5
-
-continue:
-    ld (0x46), r5   ; Store r5 into mem 0x46
-
-    ld r6, 0x01     ; Load 1 into r6
-    ld r7, 0x01     ; Load 1 into r7
-    adds r8, r6, r7 ; Add r6 and r7 as two's compliment, store in r8
-    addf r9, r6, r7 ; Add r6 and r7 as float, store in r9
-    or ra, r6, r7   ; OR r6 and r7 as float, store in ra
-    and rb, r6, r7  ; AND r6 and r7 as float, store in rb
-    xor rc, r6, r7  ; XOR r6 and r7 as float, store in rc
-    rot rd, 0x02    ; ROTATE rd to the right 2 times
-
-    halt            ; Quit";
-
-        const MNEMONIC_RESULT: &[u8] = &[
-            0x00, 0x00, // Offset by 2
-            0x20, 0x00, // Load 0x00 into r0
-            0x25, 0xFF, // Load 0xFF into r5
-            0x14, 0x44, // Load mem 0x44 into r4
-            0xB4, 0x0C, // If r4 == r0, jump to mem 0x0C (skip next line)
-            0x25, 0x01, // load 0x01 into r5
-            0x35, 0x46, // Store r5 into mem 0x46
-            0x26, 0x01, // Load 1 into r6
-            0x27, 0x01, // Load 1 into r7
-            0x58, 0x67, // Add r6 and r7 as two's compliment, store in r8
-            0x69, 0x67, // Add r6 and r7 as float, store in r9
-            0x7A, 0x67, // OR r6 and r7 as float, store in ra
-            0x8B, 0x67, // AND r6 and r7 as float, store in rb
-            0x9C, 0x67, // XOR r6 and r7 as float, store in rc
-            0xAD, 0x02, // ROTATE rd to the right 2 times
-            0xC0, 0x00, // Quit
-        ];
-
         let mut asm = Assembler::new();
-        let result = match asm.assemble(MNEMONIC_SOURCE.to_string()) {
+        let result = match asm.assemble(DEMO_SOURCE.to_string()) {
             Ok(v) => v,
             Err(e) => {
                 println!("{e}");
@@ -698,7 +663,7 @@ continue:
             }
         };
 
-        assert_eq!(result.rom(), MNEMONIC_RESULT);
+        assert_eq!(result.rom(), DEMO_ROM);
     }
 
     fn decimal_to_register_string(reg: usize) -> Result<String, String> {
