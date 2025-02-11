@@ -548,7 +548,7 @@ mod tests {
             let register = match decimal_to_register_string(i) {
                 Ok(r) => r,
                 Err(e) => {
-                    eprintln!("Invalid register {e}");
+                    println!("Invalid register {e}");
                     "r0".to_owned()
                 }
             };
