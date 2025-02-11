@@ -504,7 +504,7 @@ mod tests {
             Err(e) => {
                 println!("{e}");
 
-                let log = format!("{}", asm.log());
+                let log = asm.log().to_string();
                 println!("{log}");
                 AssemblerResult::default()
             }
@@ -517,7 +517,7 @@ mod tests {
             Err(e) => {
                 println!("{e}");
 
-                let log = format!("{}", asm.log());
+                let log = asm.log().to_string();
                 println!("{log}");
                 AssemblerResult::default()
             }
@@ -556,7 +556,7 @@ mod tests {
             Err(e) => {
                 println!("{e}");
 
-                let log = format!("{}", asm.log());
+                let log = asm.log().to_string();
                 println!("{log}");
                 AssemblerResult::default()
             }
@@ -632,7 +632,7 @@ continue:
             Err(e) => {
                 println!("{e}");
 
-                let log = format!("{}", asm.log());
+                let log = asm.log().to_string();
                 println!("{log}");
                 AssemblerResult::default()
             }
@@ -692,7 +692,7 @@ continue:
             Err(e) => {
                 println!("{e}");
 
-                let log = format!("{}", asm.log());
+                let log = asm.log().to_string();
                 println!("{log}");
                 AssemblerResult::default()
             }
