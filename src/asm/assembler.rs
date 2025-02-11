@@ -31,7 +31,6 @@ impl Assembler {
         self.log.clone()
     }
 
-    // TODO: Assembler output
     pub fn assemble(&mut self, source_code: String) -> Result<(Vec<u8>, u8), AssemblerError> {
         // <Label, Calling Address>
         let mut labels: HashMap<String, u8> = HashMap::new();
@@ -69,8 +68,8 @@ impl Assembler {
                     let (lhs, rhs) = split_two_args(post);
                     self.add_log(format!("lhs_str: {}\nrhs_str: {}", lhs, rhs));
 
-                    let lhs = resolve_argument(&lhs, line_num)?;
-                    let rhs = resolve_argument(&rhs, line_num)?;
+                    let lhs = self.resolve_argument(&lhs)?;
+                    let rhs = self.resolve_argument(&rhs)?;
                     self.add_log(format!("lhs: {:?}\nrhs: {:?}", lhs, rhs));
 
                     match lhs {
@@ -134,9 +133,8 @@ impl Assembler {
                     };
                 }
                 "adds" => {
-                    // TODO: Not tested
                     //0x5RST
-                    let (r, s, t) = self.resolve_rst(post);
+                    let (r, s, t) = self.resolve_rst(post)?;
 
                     let high = (0x5u8 << 4) | r;
                     let low = (s << 4) | t;
@@ -146,10 +144,9 @@ impl Assembler {
                     asm_result.rom_mut().push(low);
                 }
                 "addf" => {
-                    // TODO: Not tested
                     //0x6RST
 
-                    let (r, s, t) = self.resolve_rst(post);
+                    let (r, s, t) = self.resolve_rst(post)?;
 
                     let high = (0x6u8 << 4) | r;
                     let low = (s << 4) | t;
@@ -159,9 +156,8 @@ impl Assembler {
                     asm_result.rom_mut().push(low);
                 }
                 "or" => {
-                    // TODO: Not tested
                     //0x7RST
-                    let (r, s, t) = self.resolve_rst(post);
+                    let (r, s, t) = self.resolve_rst(post)?;
 
                     let high = (0x7u8 << 4) | r;
                     let low = (s << 4) | t;
@@ -171,9 +167,8 @@ impl Assembler {
                     asm_result.rom_mut().push(low);
                 }
                 "and" => {
-                    // TODO: Not tested
                     //0x8RST
-                    let (r, s, t) = self.resolve_rst(post);
+                    let (r, s, t) = self.resolve_rst(post)?;
 
                     let high = (0x8u8 << 4) | r;
                     let low = (s << 4) | t;
@@ -183,9 +178,8 @@ impl Assembler {
                     asm_result.rom_mut().push(low);
                 }
                 "xor" => {
-                    // TODO: Not tested
                     //0x9RST
-                    let (r, s, t) = self.resolve_rst(post);
+                    let (r, s, t) = self.resolve_rst(post)?;
 
                     let high = (0x9u8 << 4) | r;
                     let low = (s << 4) | t;
@@ -195,12 +189,11 @@ impl Assembler {
                     asm_result.rom_mut().push(low);
                 }
                 "rot" => {
-                    // TODO: Not tested
                     //0xAR0X
                     let (lhs, rhs) = split_two_args(post);
                     self.add_log(format!("lhs_str: {}\nrhs_str: {}", lhs, rhs));
 
-                    let lhs = match resolve_argument(&lhs, line_num) {
+                    let lhs = match self.resolve_argument(&lhs) {
                         Ok(v) => match v {
                             ValueType::Register(r) => r,
                             _ => {
@@ -214,7 +207,7 @@ impl Assembler {
                             return Err(e);
                         }
                     };
-                    let rhs = match resolve_argument(&rhs, line_num) {
+                    let rhs = match self.resolve_argument(&rhs) {
                         Ok(v) => match v {
                             ValueType::Literal(l) => l,
                             _ => {
@@ -249,7 +242,7 @@ impl Assembler {
                     let (lhs, rhs) = split_two_args(post);
                     self.add_log(format!("lhs_str: {}\nrhs_str: {}", lhs, rhs));
 
-                    let lhs = match resolve_argument(&lhs, line_num) {
+                    let lhs = match self.resolve_argument(&lhs) {
                         Ok(v) => match v {
                             ValueType::Register(r) => r,
                             _ => {
@@ -276,7 +269,7 @@ impl Assembler {
                     self.add_log(format!("Label call address: {}", call_address));
                 }
                 ".org" => {
-                    *asm_result.program_counter_mut() = match resolve_argument(post, line_num) {
+                    *asm_result.program_counter_mut() = match self.resolve_argument(post) {
                         Ok(result) => match result {
                             ValueType::Literal(v) => v,
                             _ => {
@@ -333,83 +326,127 @@ impl Assembler {
         Ok((asm_result.rom().to_vec(), asm_result.program_counter()))
     }
 
-    fn resolve_rst(&self, arg: &str) -> (u8, u8, u8) {
+    fn resolve_rst(&self, arg: &str) -> Result<(u8, u8, u8), AssemblerError> {
         let (r, s, t) = split_three_args(arg);
 
-        let r = match resolve_argument(&r, self.line_number) {
+        let r = match self.resolve_argument(&r) {
             Ok(v) => match v {
                 ValueType::Register(v) => v,
-                error => {
-                    // TODO: Fix this
-                    println!("Fix this: {error:?}");
-                    0x00
+                _ => {
+                    return Err(AssemblerError::TypeMismatch(
+                        self.line_number,
+                        "non-register".to_string(),
+                    ));
                 }
             },
             Err(e) => {
-                // TODO: Fix this
-                println!("Fix this: {e:?}");
-                0x00
+                return Err(e);
             }
         };
 
-        let s = match resolve_argument(&s, self.line_number) {
+        let s = match self.resolve_argument(&s) {
             Ok(v) => match v {
                 ValueType::Register(v) => v,
-                error => {
-                    // TODO: Fix this
-                    println!("Fix this: {error:?}");
-                    0x00
+                _ => {
+                    return Err(AssemblerError::TypeMismatch(
+                        self.line_number,
+                        "non-register".to_string(),
+                    ));
                 }
             },
             Err(e) => {
-                // TODO: Fix this
-                println!("Fix this: {e:?}");
-                0x00
+                return Err(e);
             }
         };
 
-        let t = match resolve_argument(&t, self.line_number) {
+        let t = match self.resolve_argument(&t) {
             Ok(v) => match v {
                 ValueType::Register(v) => v,
-                error => {
-                    // TODO: Fix this
-                    println!("Fix this: {error:?}");
-                    0x00
+                _ => {
+                    return Err(AssemblerError::TypeMismatch(
+                        self.line_number,
+                        "non-register".to_string(),
+                    ));
                 }
             },
             Err(e) => {
-                // TODO: Fix this
-                println!("Fix this: {e:?}");
-                0x00
+                return Err(e);
             }
         };
 
-        (r, s, t)
+        Ok((r, s, t))
     }
-}
 
-fn register_to_value(reg: &str, line_number: usize) -> Result<u8, AssemblerError> {
-    match reg {
-        "r0" => Ok(0x0),
-        "r2" => Ok(0x2),
-        "r1" => Ok(0x1),
-        "r3" => Ok(0x3),
-        "r4" => Ok(0x4),
-        "r5" => Ok(0x5),
-        "r6" => Ok(0x6),
-        "r7" => Ok(0x7),
-        "r8" => Ok(0x8),
-        "r9" => Ok(0x9),
-        "ra" => Ok(0xA),
-        "rb" => Ok(0xB),
-        "rc" => Ok(0xC),
-        "rd" => Ok(0xD),
-        "re" => Ok(0xE),
-        "rf" => Ok(0xF),
-        _ => Err(AssemblerError::UnknownRegister(
-            line_number,
-            reg.to_string(),
-        )),
+    fn register_to_value(&self, reg: &str) -> Result<u8, AssemblerError> {
+        match reg {
+            "r0" => Ok(0x0),
+            "r2" => Ok(0x2),
+            "r1" => Ok(0x1),
+            "r3" => Ok(0x3),
+            "r4" => Ok(0x4),
+            "r5" => Ok(0x5),
+            "r6" => Ok(0x6),
+            "r7" => Ok(0x7),
+            "r8" => Ok(0x8),
+            "r9" => Ok(0x9),
+            "ra" => Ok(0xA),
+            "rb" => Ok(0xB),
+            "rc" => Ok(0xC),
+            "rd" => Ok(0xD),
+            "re" => Ok(0xE),
+            "rf" => Ok(0xF),
+            _ => Err(AssemblerError::UnknownRegister(
+                self.line_number,
+                reg.to_string(),
+            )),
+        }
+    }
+
+    fn resolve_argument(&self, arg: &str) -> Result<ValueType, AssemblerError> {
+        let val = arg.to_lowercase();
+        if val.starts_with('r') {
+            // Register
+            match self.register_to_value(val.as_str()) {
+                Ok(v) => {
+                    return Ok(ValueType::Register(v));
+                }
+                Err(e) => return Err(e),
+            }
+        }
+
+        if val.starts_with('(') && val.ends_with(')') {
+            // Memory address
+            match numeric_to_value(val.as_str()) {
+                Ok(v) => {
+                    return Ok(ValueType::Address(v));
+                }
+                Err(_) => {
+                    return Err(AssemblerError::MalformedAddress(self.line_number, val));
+                }
+            }
+        } else if val.starts_with('(') || val.ends_with(')') {
+            return Err(AssemblerError::MalformedAddress(self.line_number, val));
+        }
+
+        if val.starts_with("0x") || val.starts_with("0b") {
+            // Literal
+            match numeric_to_value(val.as_str()) {
+                Ok(v) => {
+                    return Ok(ValueType::Literal(v));
+                }
+                Err(_) => {
+                    return Err(AssemblerError::MalformedNumber(self.line_number, val));
+                }
+            }
+        }
+
+        if val.trim_end().ends_with(':') {
+            return Ok(ValueType::Label(val.trim_end_matches(':').to_string()));
+        }
+
+        //TODO: labels
+        //Ok(ValueType::Literal(0x0))
+        Err(AssemblerError::UnknownArgument(self.line_number, val))
     }
 }
 
@@ -450,53 +487,6 @@ fn split_three_args(args: &str) -> (String, String, String) {
         result[1].trim().to_string(),
         result[2].trim().to_string(),
     )
-}
-
-fn resolve_argument(arg: &str, line_number: usize) -> Result<ValueType, AssemblerError> {
-    let val = arg.to_lowercase();
-    if val.starts_with('r') {
-        // Register
-        match register_to_value(val.as_str(), line_number) {
-            Ok(v) => {
-                return Ok(ValueType::Register(v));
-            }
-            Err(e) => return Err(e),
-        }
-    }
-
-    if val.starts_with('(') && val.ends_with(')') {
-        // Memory address
-        match numeric_to_value(val.as_str()) {
-            Ok(v) => {
-                return Ok(ValueType::Address(v));
-            }
-            Err(_) => {
-                return Err(AssemblerError::MalformedAddress(line_number, val));
-            }
-        }
-    } else if val.starts_with('(') || val.ends_with(')') {
-        return Err(AssemblerError::MalformedAddress(line_number, val));
-    }
-
-    if val.starts_with("0x") || val.starts_with("0b") {
-        // Literal
-        match numeric_to_value(val.as_str()) {
-            Ok(v) => {
-                return Ok(ValueType::Literal(v));
-            }
-            Err(_) => {
-                return Err(AssemblerError::MalformedNumber(line_number, val));
-            }
-        }
-    }
-
-    if val.trim_end().ends_with(':') {
-        return Ok(ValueType::Label(val.trim_end_matches(':').to_string()));
-    }
-
-    //TODO: labels
-    //Ok(ValueType::Literal(0x0))
-    Err(AssemblerError::UnknownArgument(line_number, val))
 }
 
 #[cfg(test)]
