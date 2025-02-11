@@ -484,8 +484,7 @@ impl eframe::App for VoleUI {
                                     Ok(r) => (r.0, r.1),
                                     Err(e) => {
                                         // TODO: Push to UI
-                                        let msg = format!("Compilation errors {:?}", e);
-                                        println!("{}", msg);
+                                        println!("{e}");
                                         (vec![0; 1], 0)
                                     }
                                 };
