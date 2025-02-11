@@ -1,6 +1,6 @@
 use super::{cycle::CycleExecutionMode, numeric::NumericDisplay, rom::Rom, source::SourceEditMode};
 use crate::{
-    assembler::Assembler,
+    assembler::{Assembler, AssemblerError},
     ui::help,
     vole::{StartMode, Vole},
 };
@@ -98,6 +98,9 @@ pub struct VoleUI {
 
     #[serde(skip)]
     compiled_source: Vec<u8>,
+
+    #[serde(skip)]
+    compilation_error: Option<AssemblerError>,
 }
 
 impl Default for VoleUI {
@@ -119,6 +122,7 @@ impl Default for VoleUI {
             cycle_timer: 0.0,
             assembler: Assembler::new(),
             compiled_source: Vec::new(),
+            compilation_error: None,
         }
     }
 }
@@ -481,10 +485,13 @@ impl eframe::App for VoleUI {
                                 // TODO: UI for errors
                                 let result = self.assembler.assemble(self.source_code.clone());
                                 let (rom, pc) = match result {
-                                    Ok(r) => (r.0, r.1),
+                                    Ok(r) => {
+                                        self.compilation_error = None;
+                                        (r.0, r.1)
+                                    }
                                     Err(e) => {
                                         // TODO: Push to UI
-                                        println!("{e}");
+                                        self.compilation_error = Some(e);
                                         (vec![0; 1], 0)
                                     }
                                 };
@@ -493,6 +500,12 @@ impl eframe::App for VoleUI {
                                 self.compiled_source = rom;
                                 self.program_counter = pc;
                             }
+
+                            if self.compilation_error.is_some() {
+                                let error = format!("{}", self.compilation_error.as_ref().unwrap());
+                                ui.label(error);
+                            }
+
                             ui.collapsing("Compiled Source", |ui| {
                                 egui::ScrollArea::vertical().show(ui, |ui| {
                                     ui.label("[");
