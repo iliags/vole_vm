@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## 0.0.8
 
+- Assembler returns errors
+
 ## 0.0.7
 
 - Simple coloring when a program is running
