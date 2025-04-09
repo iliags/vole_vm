@@ -1,8 +1,8 @@
 [package]
 name = "vole_vm"
-version = "0.0.8"
+version = "0.0.9"
 authors = ["James Lennon"]
-edition = "2021"
+edition = "2024"
 include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 description = "A software implementation of the Vole virtual machine."
 build = "build.rs"
