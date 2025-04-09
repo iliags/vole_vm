@@ -1,6 +1,6 @@
 use super::{cycle::CycleExecutionMode, numeric::NumericDisplay, rom::Rom, source::SourceEditMode};
 use crate::{
-    assembler::Assembler,
+    asm::{assembler::Assembler, AssemblerError, DEMO_ROM, DEMO_SOURCE},
     ui::help,
     vole::{StartMode, Vole},
 };
@@ -8,47 +8,6 @@ use egui::{scroll_area::ScrollBarVisibility, Color32, Vec2};
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 use regex::Regex;
 use strum::IntoEnumIterator;
-
-const DEMO_SOURCE: &str = ".org 0x02           ; Offset start by 2
-
-ld r0,0x00          ; Load 0x00 into r0
-ld r5, 0xFF         ; Load 0xFF into r5
-ld r4, (0x44)       ; Load mem 0x44 into r4
-
-jp r4, continue     ; If r4 == r0, jump to continue
-ld r5, 0x01         ; Load 0x01 into r5
-
-continue:
-    ld (0x46), r5   ; Store r5 into mem 0x46
-
-    ld r6, 0x01     ; Load 1 into r6
-    ld r7, 0x01     ; Load 1 into r7
-    adds r8, r6, r7 ; Add r6 and r7 as two's compliment, store in r8
-    addf r9, r6, r7 ; Add r6 and r7 as float, store in r9
-    or ra, r6, r7   ; OR r6 and r7 as float, store in ra
-    and rb, r6, r7  ; AND r6 and r7 as float, store in rb
-    xor rc, r6, r7  ; XOR r6 and r7 as float, store in rc
-    rot rd, 0x02    ; ROTATE rd to the right 2 times
-
-    halt            ; Quit";
-
-const DEMO_ROM: &[u8] = &[
-    0x20, 0x00, // Load 0x00 into r0
-    0x25, 0xFF, // Load 0xFF into r5
-    0x14, 0x44, // Load mem 0x44 into r4
-    0xB4, 0x0A, // If r4 == r0, jump to mem 0x0A (skip next line)
-    0x25, 0x01, // load 0x01 into r5
-    0x35, 0x46, // Store r5 into mem 0x46
-    0x26, 0x01, // Load 1 into r6
-    0x27, 0x01, // Load 1 into r7
-    0x58, 0x67, // Add r6 and r7 as two's compliment, store in r8
-    0x69, 0x67, // Add r6 and r7 as float, store in r9
-    0x7A, 0x67, // OR r6 and r7 as float, store in ra
-    0x8B, 0x67, // AND r6 and r7 as float, store in rb
-    0x9C, 0x67, // XOR r6 and r7 as float, store in rc
-    0xAD, 0x02, // ROTATE rd to the right 2 times
-    0xC0, 0x00, // Quit
-];
 
 const HEX_STR: &str = "^(0x|0X)?[a-fA-F0-9]+$";
 const BINARY_STR: &str = "\\b(0b)?[01]+\\b";
@@ -98,6 +57,9 @@ pub struct VoleUI {
 
     #[serde(skip)]
     compiled_source: Vec<u8>,
+
+    #[serde(skip)]
+    compilation_error: Option<AssemblerError>,
 }
 
 impl Default for VoleUI {
@@ -119,6 +81,7 @@ impl Default for VoleUI {
             cycle_timer: 0.0,
             assembler: Assembler::new(),
             compiled_source: Vec::new(),
+            compilation_error: None,
         }
     }
 }
@@ -243,11 +206,11 @@ impl eframe::App for VoleUI {
                     ui.heading("Program Source Code");
                     // Source edit mode selection
                     egui::ComboBox::from_label("Edit Mode")
-                        .selected_text(self.source_edit_mode.as_string())
+                        .selected_text(self.source_edit_mode.to_string())
                         .show_ui(ui, |ui| {
                             let edit_mode = &mut self.source_edit_mode;
                             for mode in SourceEditMode::iter() {
-                                ui.selectable_value(edit_mode, mode, mode.as_string());
+                                ui.selectable_value(edit_mode, mode, mode.to_string());
                             }
                         });
 
@@ -481,11 +444,13 @@ impl eframe::App for VoleUI {
                                 // TODO: UI for errors
                                 let result = self.assembler.assemble(self.source_code.clone());
                                 let (rom, pc) = match result {
-                                    Ok(r) => (r.0, r.1),
+                                    Ok(r) => {
+                                        self.compilation_error = None;
+                                        (r.rom().to_vec(), r.program_counter())
+                                    }
                                     Err(e) => {
                                         // TODO: Push to UI
-                                        let msg = format!("Compilation errors {:?}", e);
-                                        println!("{}", msg);
+                                        self.compilation_error = Some(e);
                                         (vec![0; 1], 0)
                                     }
                                 };
@@ -494,6 +459,12 @@ impl eframe::App for VoleUI {
                                 self.compiled_source = rom;
                                 self.program_counter = pc;
                             }
+
+                            if self.compilation_error.is_some() {
+                                let error = format!("{}", self.compilation_error.as_ref().unwrap());
+                                ui.label(error);
+                            }
+
                             ui.collapsing("Compiled Source", |ui| {
                                 egui::ScrollArea::vertical().show(ui, |ui| {
                                     ui.label("[");
@@ -548,7 +519,7 @@ impl eframe::App for VoleUI {
                             {
                                 self.vole.load_rom(self.rom.bytes());
                                 self.vole
-                                    .start(StartMode::Reset, Some(self.program_counter));
+                                    .start(&StartMode::Reset, Some(self.program_counter));
                                 self.execution_mode = CycleExecutionMode::FullSpeed;
                             }
                         }
@@ -560,7 +531,7 @@ impl eframe::App for VoleUI {
                             {
                                 self.vole.load_rom(self.rom.bytes());
                                 self.vole
-                                    .start(StartMode::Reset, Some(self.program_counter));
+                                    .start(&StartMode::Reset, Some(self.program_counter));
                             }
                             let mut speed_limit = limit;
                             ui.add(
@@ -579,7 +550,7 @@ impl eframe::App for VoleUI {
                             {
                                 self.vole.load_rom(self.rom.bytes());
                                 self.vole
-                                    .start(StartMode::Reset, Some(self.program_counter));
+                                    .start(&StartMode::Reset, Some(self.program_counter));
                                 self.execution_mode = CycleExecutionMode::Manual(false);
                             }
 

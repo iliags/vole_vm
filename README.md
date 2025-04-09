@@ -6,7 +6,7 @@ An implementation of the virtual machine as specified in *Computer Science: An O
 
 ## Notes
 
-The [assembler](https://github.com/iliags/vole_vm/blob/main/src/assembler.rs) and the [virtual machine](https://github.com/iliags/vole_vm/blob/main/src/vole.rs) are self-contained, but they were constructed for use within this project. The VM has no dependencies, the assembler uses a `HashMap` for label resolution, and they both use the `rand` crate for tests.
+The [assembler](https://github.com/iliags/vole_vm/blob/main/src/assembler.rs) and the [virtual machine](https://github.com/iliags/vole_vm/blob/main/src/vole.rs) are self-contained, but they were constructed for use within this project. The VM has no dependencies, the assembler uses a `HashMap` for label resolution and `thiserror` for error messages; they both use the `rand` crate for tests.
 
 ## Building
 

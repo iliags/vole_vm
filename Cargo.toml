@@ -1,14 +1,17 @@
 [package]
 name = "vole_vm"
-version = "0.0.7"
+version = "0.0.9"
 authors = ["James Lennon"]
-edition = "2021"
+edition = "2024"
 include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 description = "A software implementation of the Vole virtual machine."
 build = "build.rs"
 
 [lints.rust]
 missing_docs = "warn"
+
+[lints.clippy]
+#pedantic = "warn"
 
 [dependencies]
 egui = { version = "0.31", features = ["color-hex"] }
@@ -27,6 +30,8 @@ strum = "0.27"
 strum_macros = "0.27"
 
 regex = "1.11"
+
+thiserror = "2"
 
 # App persistence
 serde = { version = "1", features = ["derive"] }
